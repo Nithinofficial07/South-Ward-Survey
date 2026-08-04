@@ -1,0 +1,193 @@
+import { useMemo, useState } from "react";
+import { AnimatePresence, motion } from "motion/react";
+import { AlertTriangle, ArrowLeft, ChevronDown, ExternalLink } from "lucide-react";
+import { SectionHead } from "./CategoryBreakdown";
+import { CountUp } from "./CountUp";
+import {
+  COST_COLORS,
+  PRIORITY_LABELS,
+  inr,
+  priority,
+  priorityByWard,
+  wardAccent,
+  wards,
+  type PriorityCat,
+} from "@/lib/ward-data";
+
+export function PriorityWorks() {
+  const [open, setOpen] = useState(false);
+  const [selectedWard, setSelectedWard] = useState<number | null>(null);
+
+  const byWard = useMemo(() => priorityByWard(), []);
+  const totalCount = priority.length;
+  const totalCost = priority.reduce((s, p) => s + p.cost, 0);
+
+  const wardRows = useMemo(
+    () =>
+      wards
+        .map((w, i) => ({ w, i, ...byWard.get(w.ward)! }))
+        .filter((r) => r.count > 0)
+        .sort((a, b) => b.cost - a.cost || b.count - a.count),
+    [byWard],
+  );
+
+  const selected = selectedWard !== null ? byWard.get(selectedWard) : undefined;
+  const selectedMeta = selectedWard !== null ? wards.find((w) => w.ward === selectedWard) : undefined;
+
+  const catColor: Record<PriorityCat, string> = {
+    road: COST_COLORS.road,
+    ugd: COST_COLORS.ugd,
+    attach: COST_COLORS.attach,
+    swg: COST_COLORS.swg,
+    jal: COST_COLORS.jal,
+    elec: "var(--coral)",
+  };
+
+  return (
+    <section className="relative mx-auto max-w-6xl px-6 pb-24">
+      <SectionHead
+        eyebrow="05 — What needs attention first"
+        title="Top priority works"
+        sub="Segments flagged Required (or missing entirely) across every category — the work that can't wait for the routine maintenance cycle."
+      />
+
+      <motion.div
+        initial={{ opacity: 0, y: 24 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        viewport={{ once: true, margin: "-60px" }}
+        transition={{ duration: 0.5 }}
+        className="shadow-card mt-8 overflow-hidden rounded-3xl border bg-card"
+      >
+        <button
+          onClick={() => {
+            setOpen(!open);
+            if (open) setSelectedWard(null);
+          }}
+          className="flex w-full cursor-pointer items-center justify-between gap-4 p-6 text-left"
+        >
+          <div className="flex items-center gap-4">
+            <span className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-[color-mix(in_oklab,var(--coral)_16%,transparent)] text-[var(--coral)]">
+              <AlertTriangle className="h-5 w-5" />
+            </span>
+            <div>
+              <div className="font-display text-lg font-bold sm:text-xl">
+                {totalCount.toLocaleString("en-IN")} priority items across {wardRows.length} wards
+              </div>
+              <div className="font-mono text-[11px] uppercase tracking-widest text-muted-foreground">
+                Tap to see the ward-by-ward breakdown
+              </div>
+            </div>
+          </div>
+          <div className="flex items-center gap-3">
+            <span className="font-display text-xl font-bold text-[var(--coral)] sm:text-2xl">
+              <CountUp to={totalCost} format={inr} />
+            </span>
+            <motion.span animate={{ rotate: open ? 180 : 0 }} className="grid h-8 w-8 place-items-center">
+              <ChevronDown className="h-4 w-4" />
+            </motion.span>
+          </div>
+        </button>
+
+        <AnimatePresence initial={false}>
+          {open && (
+            <motion.div
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: "auto", opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+              transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
+              className="overflow-hidden border-t"
+            >
+              <div className="p-6">
+                {selectedWard === null ? (
+                  <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                    {wardRows.map(({ w, i, count, cost }) => (
+                      <button
+                        key={w.ward}
+                        onClick={() => setSelectedWard(w.ward)}
+                        className="cursor-pointer rounded-2xl border bg-surface p-4 text-left transition hover:-translate-y-0.5"
+                        style={{ borderTop: `3px solid ${wardAccent(i)}` }}
+                      >
+                        <div className="flex items-baseline justify-between gap-2">
+                          <span className="font-display text-sm font-bold" style={{ color: wardAccent(i) }}>
+                            {String(w.ward).padStart(2, "0")}
+                          </span>
+                          <span className="truncate text-xs text-muted-foreground">{w.name}</span>
+                        </div>
+                        <div className="mt-2 flex items-baseline justify-between gap-2">
+                          <span className="font-mono text-[11px] text-muted-foreground">
+                            {count} item{count === 1 ? "" : "s"}
+                          </span>
+                          <span className="font-display text-sm font-bold">{inr(cost)}</span>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                ) : (
+                  <div>
+                    <button
+                      onClick={() => setSelectedWard(null)}
+                      className="mb-4 inline-flex cursor-pointer items-center gap-1.5 font-mono text-[11px] uppercase tracking-widest text-muted-foreground hover:text-accent"
+                    >
+                      <ArrowLeft className="h-3.5 w-3.5" /> All wards
+                    </button>
+                    <div className="mb-4 font-display text-base font-bold">
+                      Ward {String(selectedWard).padStart(2, "0")} — {selectedMeta?.name}
+                      <span className="ml-2 font-mono text-xs font-normal text-muted-foreground">
+                        {selected?.count} items · {inr(selected?.cost ?? 0)}
+                      </span>
+                    </div>
+                    <div className="space-y-2">
+                      {selected?.items
+                        .slice()
+                        .sort((a, b) => b.cost - a.cost)
+                        .map((item, idx) => (
+                          <div
+                            key={idx}
+                            className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3 rounded-xl border bg-surface p-3"
+                          >
+                            <span
+                              className="rounded-full px-2.5 py-1 font-mono text-[10px] uppercase tracking-wider"
+                              style={{
+                                background: `color-mix(in oklab, ${catColor[item.cat]} 16%, transparent)`,
+                                color: catColor[item.cat],
+                              }}
+                            >
+                              {PRIORITY_LABELS[item.cat]}
+                            </span>
+                            <div className="min-w-0">
+                              <div className="truncate text-sm font-medium">
+                                {item.main}
+                                {item.cross && <span className="text-muted-foreground"> · {item.cross}</span>}
+                              </div>
+                              <div className="truncate font-mono text-[10.5px] text-muted-foreground">
+                                {item.area} — {item.action}
+                              </div>
+                            </div>
+                            <div className="text-right">
+                              <div className="font-mono text-sm font-bold">
+                                {item.cost > 0 ? inr(item.cost) : "TBD"}
+                              </div>
+                              {item.map && (
+                                <a
+                                  href={item.map}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                  className="mt-0.5 inline-flex items-center gap-1 font-mono text-[10px] text-muted-foreground hover:text-accent"
+                                >
+                                  Map <ExternalLink className="h-3 w-3" />
+                                </a>
+                              )}
+                            </div>
+                          </div>
+                        ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </motion.div>
+    </section>
+  );
+}
