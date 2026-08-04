@@ -1,9 +1,12 @@
-"""Rebuild src/data/wardData.json from the 20 raw ward survey Excel files.
+"""Rebuild src/data/wardData.json from the reference dashboard + raw Excel files.
 
-Reads every "WARD *.xlsx" file in the repo root, applies the same cost-rate
-formulas as the reference DVG SOUTH DATA DASHBOAD.html, and writes wards,
-roads (per-segment register) and priority (urgent-work items) into
-src/data/wardData.json.
+Primary source: the ALL_DATA array embedded in "DVG SOUTH DATA DASHBOAD.html"
+(the reference dashboard) — used verbatim, including its already-computed
+per-segment costs, for every ward it covers (18 of the 20 wards).
+
+Wards 9 and 21 are not present in that reference file at all, so those two
+are parsed from their raw survey Excel files instead, using the exact same
+cost-rate formulas as the reference dashboard (DEFAULT_RATES / calcRecordCosts).
 
 Run with: python scripts/build-ward-data.py
 """
@@ -12,6 +15,10 @@ import os
 import openpyxl
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+HTML_PATH = os.path.join(ROOT, "DVG SOUTH DATA DASHBOAD.html")
+
+# Wards not present in the reference HTML — filled in from their raw Excel files.
+EXCEL_ONLY_WARDS = {9, 21}
 
 WARD_FILES = {
     1: "WARD_01.xlsx",
@@ -99,10 +106,114 @@ def cond_bucket(c):
         return "Maintenance"
     if c in ("Required", "Additional Required"):
         return "Required"
-    if c == "Unknown":
-        return "Unknown"
     return "Unknown"
 
+
+def priority_items_for(ward, area, main, cross, map_link, *, material, road_action, road_cost,
+                        ugd_existing, ugd_cond, ugd_action, ugd_cost,
+                        attach_required, attach_cost,
+                        swg_required, swg_cost,
+                        jal_existing, jal_cond, jal_action, jal_cost,
+                        elec_cond):
+    items = []
+
+    def add(cat, action, cost):
+        items.append({"ward": ward, "cat": cat, "area": area, "main": main, "cross": cross,
+                       "action": action, "cost": cost, "map": map_link})
+
+    if material in ("Mud", "Gravel"):
+        add("road", road_action, road_cost)
+    if ugd_existing == "No" or ugd_cond in REQUIRED_TIER:
+        add("ugd", ugd_action, ugd_cost)
+    if attach_required:
+        add("attach", "Footpath/attachment repair required", attach_cost)
+    if swg_required:
+        add("swg", "Storm water drain repair required", swg_cost)
+    if jal_existing == "No" or jal_cond in REQUIRED_TIER:
+        add("jal", jal_action, jal_cost)
+    if elec_cond in REQUIRED_TIER:
+        add("elec", f"Electrical: {elec_cond} (rate TBD)", 0)
+    return items
+
+
+# ---------------------------------------------------------------------------
+# Source 1: the reference dashboard's embedded ALL_DATA (authoritative for the
+# 18 wards it covers — used as-is, including its precomputed per-segment costs)
+# ---------------------------------------------------------------------------
+
+def load_html_records():
+    with open(HTML_PATH, encoding="utf-8") as f:
+        data_line = None
+        for line in f:
+            if line.startswith("const ALL_DATA = "):
+                data_line = line
+                break
+    if data_line is None:
+        raise RuntimeError("Could not find ALL_DATA in the reference HTML")
+    start = data_line.index("const ALL_DATA = ") + len("const ALL_DATA = ")
+    end = data_line.rindex("];") + 1
+    all_data = json.loads(data_line[start:end])
+    by_ward = {}
+    for rec in all_data:
+        by_ward.setdefault(rec["ward"], []).append(rec)
+    return by_ward
+
+
+def adapt_html_record(rec, ward):
+    dist = num(rec.get("dist"))
+    width = num(rec.get("width"))
+    area_sqm = num(rec.get("area_sqm")) or round(dist * width, 2)
+    material = norm(rec.get("material"))
+    road_cond = cond_bucket(norm(rec.get("cond")))
+
+    ugd_existing = norm_yesno(rec.get("ugd_existing"))
+    ugd_cond = norm(rec.get("ugd_cond"))
+    jal_existing = norm_yesno(rec.get("jal_existing"))
+    jal_cond = norm(rec.get("jal_cond"))
+    elec_cond = norm(rec.get("elec_cond"))
+    elec_bucket = cond_bucket(elec_cond)
+    has_light_data = elec_cond is not None or norm(rec.get("light_type")) is not None
+
+    att_conds = [norm(rec.get("att1_ne_cond")), norm(rec.get("att2_ne_cond")),
+                 norm(rec.get("att1_sw_cond")), norm(rec.get("att2_sw_cond"))]
+    swg_conds = [norm(rec.get("swg_ne_cond")), norm(rec.get("swg_sw_cond"))]
+
+    area = norm(rec.get("area")) or ""
+    main = norm(rec.get("main")) or ""
+    cross = norm(rec.get("cross")) or ""
+    map_link = norm(rec.get("map")) or ""
+
+    cost = {
+        "road": round(num(rec.get("road_cost"))),
+        "ugd": round(num(rec.get("ugd_cost"))),
+        "attach": round(num(rec.get("attach_cost"))),
+        "swg": round(num(rec.get("swg_cost"))),
+        "jal": round(num(rec.get("jal_cost"))),
+        "signage": round(num(rec.get("signage_cost"))),
+    }
+    total = round(num(rec.get("total_cost")))
+
+    priority_items = priority_items_for(
+        ward, area, main, cross, map_link,
+        material=material, road_action=norm(rec.get("road_action")) or "Convert to concrete", road_cost=cost["road"],
+        ugd_existing=ugd_existing, ugd_cond=ugd_cond, ugd_action=norm(rec.get("ugd_action")) or "Action required", ugd_cost=cost["ugd"],
+        attach_required=any(c in REQUIRED_TIER for c in att_conds), attach_cost=cost["attach"],
+        swg_required=any(c in REQUIRED_TIER for c in swg_conds), swg_cost=cost["swg"],
+        jal_existing=jal_existing, jal_cond=jal_cond, jal_action=norm(rec.get("jal_action")) or "Action required", jal_cost=cost["jal"],
+        elec_cond=elec_cond,
+    )
+
+    return {
+        "cost": cost, "total": total, "road_cond": road_cond, "elec_bucket": elec_bucket,
+        "has_light_data": has_light_data, "material": material, "area_sqm": area_sqm,
+        "dist": dist, "width": width, "area": area, "main": main, "cross": cross, "map": map_link,
+        "priority_items": priority_items,
+    }
+
+
+# ---------------------------------------------------------------------------
+# Source 2: raw Excel, used only for the 2 wards missing from the reference
+# ---------------------------------------------------------------------------
 
 def read_ward_rows(ward, filename):
     path = os.path.join(ROOT, filename)
@@ -128,13 +239,11 @@ def calc_row(d, ward):
     material = norm(d.get("Material"))
     road_cond = cond_bucket(norm(d.get("Road Condition")))
 
-    # Road
     road_cost, road_action = 0, "No action"
     if material in ("Mud", "Gravel"):
         road_action = "Convert to concrete"
         road_cost = round(area_sqm * RATES["road_convert"])
 
-    # UGD
     ugd_existing = norm_yesno(d.get("UGD Existing"))
     ugd_cond = norm(d.get("UGD Condition"))
     ugd_cost, ugd_action = 0, "No action"
@@ -145,7 +254,6 @@ def calc_row(d, ward):
         ugd_action = f"Repair ({ugd_cond})"
         ugd_cost = round(UGD_RATE[ugd_cond] * dist)
 
-    # Attachments (4 sides)
     def att_cost(cond, w):
         cond = norm(cond)
         w = num(w)
@@ -157,11 +265,9 @@ def calc_row(d, ward):
         ("att1_sw", d.get("Attachment 1 Condition (S/W)"), d.get("Attachment 1 Width (m) (S/W)")),
         ("att2_sw", d.get("Attachment 2 Condition (S/W)"), d.get("Attachment 2 Width (m) (S/W)")),
     ]
-    att_costs = {k: att_cost(c, w) for k, c, w in att_sides}
-    attach_cost = sum(att_costs.values())
+    attach_cost = sum(att_cost(c, w) for _, c, w in att_sides)
     attach_required = any(norm(c) in REQUIRED_TIER for _, c, _ in att_sides)
 
-    # SWG
     def swg_cost_fn(cond):
         cond = norm(cond)
         return round(SWG_RATE[cond] * dist) if cond in SWG_RATE else 0
@@ -171,7 +277,6 @@ def calc_row(d, ward):
     swg_cost = swg_cost_fn(swg_ne_cond) + swg_cost_fn(swg_sw_cond)
     swg_required = swg_ne_cond in REQUIRED_TIER or swg_sw_cond in REQUIRED_TIER
 
-    # Jalasiri
     jal_existing = norm_yesno(d.get("Jalasiri Existing"))
     jal_cond = norm(d.get("Jalasiri Condition"))
     jal_cost, jal_action = 0, "No action"
@@ -186,71 +291,61 @@ def calc_row(d, ward):
             jal_action = "Reactivation required"
             jal_cost = RATES["jal_reactivation"]
 
-    # Signage
     sign = norm(d.get("Road Sign"))
-    signage_cost, sign_action = 0, "No action"
+    signage_cost = 0
     if sign == "No":
-        sign_action = "Installation required"
         signage_cost = RATES["signage"]
     elif sign == "Damaged":
-        sign_action = "Replacement required"
         signage_cost = RATES["signage"]
 
-    # Electrical (no rate defined yet)
     elec_cond = norm(d.get("Electrical Condition"))
     elec_bucket = cond_bucket(elec_cond)
     has_light_data = elec_cond is not None or norm(d.get("Light Type")) is not None
 
-    total = road_cost + ugd_cost + attach_cost + swg_cost + jal_cost + signage_cost
+    cost = {"road": road_cost, "ugd": ugd_cost, "attach": attach_cost,
+            "swg": swg_cost, "jal": jal_cost, "signage": signage_cost}
+    total = sum(cost.values())
 
-    priority_items = []
     area = norm(d.get("Area Name")) or ""
     main = norm(d.get("Road Name (Main)")) or ""
     cross = norm(d.get("Road Name (Cross)")) or ""
     map_link = norm(d.get("Location (Google Maps link)")) or ""
 
-    def add_priority(cat, action, cost):
-        priority_items.append({
-            "ward": ward, "cat": cat, "area": area, "main": main, "cross": cross,
-            "action": action, "cost": cost, "map": map_link,
-        })
-
-    if material in ("Mud", "Gravel"):
-        add_priority("road", road_action, road_cost)
-    if ugd_existing == "No" or ugd_cond in REQUIRED_TIER:
-        add_priority("ugd", ugd_action, ugd_cost)
-    if attach_required:
-        add_priority("attach", "Footpath/attachment repair required", attach_cost)
-    if swg_required:
-        add_priority("swg", "Storm water drain repair required", swg_cost)
-    if jal_existing == "No" or jal_cond in REQUIRED_TIER:
-        add_priority("jal", jal_action, jal_cost)
-    if elec_cond in REQUIRED_TIER:
-        add_priority("elec", f"Electrical: {elec_cond} (rate TBD)", 0)
+    priority_items = priority_items_for(
+        ward, area, main, cross, map_link,
+        material=material, road_action=road_action, road_cost=road_cost,
+        ugd_existing=ugd_existing, ugd_cond=ugd_cond, ugd_action=ugd_action, ugd_cost=ugd_cost,
+        attach_required=attach_required, attach_cost=attach_cost,
+        swg_required=swg_required, swg_cost=swg_cost,
+        jal_existing=jal_existing, jal_cond=jal_cond, jal_action=jal_action, jal_cost=jal_cost,
+        elec_cond=elec_cond,
+    )
 
     return {
-        "cost": {"road": road_cost, "ugd": ugd_cost, "attach": attach_cost,
-                 "swg": swg_cost, "jal": jal_cost, "signage": signage_cost},
-        "total": total,
-        "road_cond": road_cond,
-        "elec_bucket": elec_bucket,
-        "has_light_data": has_light_data,
-        "material": material,
-        "area_sqm": area_sqm,
-        "dist": dist,
-        "width": width,
-        "area": area, "main": main, "cross": cross, "map": map_link,
+        "cost": cost, "total": total, "road_cond": road_cond, "elec_bucket": elec_bucket,
+        "has_light_data": has_light_data, "material": material, "area_sqm": area_sqm,
+        "dist": dist, "width": width, "area": area, "main": main, "cross": cross, "map": map_link,
         "priority_items": priority_items,
     }
 
 
 def build():
+    html_records = load_html_records()
+    print(f"Reference HTML covers wards: {sorted(html_records.keys())}\n")
+
     wards_out = []
     roads_out = []
     priority_out = []
 
     for ward in sorted(WARD_FILES):
-        rows = read_ward_rows(ward, WARD_FILES[ward])
+        if ward in EXCEL_ONLY_WARDS or ward not in html_records:
+            rows = read_ward_rows(ward, WARD_FILES[ward])
+            normalized = [calc_row(d, ward) for d in rows]
+            source = WARD_FILES[ward]
+        else:
+            normalized = [adapt_html_record(rec, ward) for rec in html_records[ward]]
+            source = "reference HTML"
+
         segments = 0
         length = 0.0
         area_sqm_total = 0.0
@@ -261,8 +356,7 @@ def build():
         materials_tally = {}
         area_agg = {}
 
-        for d in rows:
-            r = calc_row(d, ward)
+        for r in normalized:
             segments += 1
             length += r["dist"]
             area_sqm_total += r["area_sqm"]
@@ -314,7 +408,7 @@ def build():
             "areaCount": len(area_agg),
         })
 
-        print(f"ward {ward:>2} ({WARD_NAMES[ward]}): {segments} segments, "
+        print(f"ward {ward:>2} ({WARD_NAMES[ward]}, from {source}): {segments} segments, "
               f"{round(length)} m, total {round(total_cost):,}")
 
     out = {"wards": wards_out, "roads": roads_out, "priority": priority_out}
