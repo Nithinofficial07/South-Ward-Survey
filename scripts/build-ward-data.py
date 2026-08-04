@@ -109,30 +109,57 @@ def cond_bucket(c):
     return "Unknown"
 
 
-def priority_items_for(ward, area, main, cross, map_link, *, material, road_action, road_cost,
+COND_RANK = {"Required": 3, "Maintenance": 2, "Good": 1, "Unknown": 0}
+
+
+def worst_condition(conds):
+    bucketed = [cond_bucket(c) for c in conds] or ["Unknown"]
+    return max(bucketed, key=lambda c: COND_RANK[c])
+
+
+def action_for_cond(cond, label):
+    if cond == "Required":
+        return f"{label} repair required"
+    if cond == "Maintenance":
+        return f"{label} maintenance due"
+    if cond == "Good":
+        return "No action"
+    return "Not assessed"
+
+
+def category_items_for(ward, area, main, cross, map_link, *, road_cond, road_action, road_cost,
                         ugd_existing, ugd_cond, ugd_action, ugd_cost,
-                        attach_required, attach_cost,
-                        swg_required, swg_cost,
+                        att_conds, attach_cost,
+                        swg_conds, swg_cost,
                         jal_existing, jal_cond, jal_action, jal_cost,
-                        elec_cond):
+                        elec_cond, has_light_data):
+    """One item per category (road, ugd, attach, swg, jal, elec) for every
+    segment, tagged with its condition bucket — not just the urgent ones.
+    Powers both the ward category browser and the Required-only priority view."""
     items = []
 
-    def add(cat, action, cost):
-        items.append({"ward": ward, "cat": cat, "area": area, "main": main, "cross": cross,
-                       "action": action, "cost": cost, "map": map_link})
+    def add(cat, cond, action, cost):
+        items.append({"ward": ward, "cat": cat, "cond": cond, "area": area, "main": main,
+                       "cross": cross, "action": action, "cost": cost, "map": map_link})
 
-    if material in ("Mud", "Gravel"):
-        add("road", road_action, road_cost)
-    if ugd_existing == "No" or ugd_cond in REQUIRED_TIER:
-        add("ugd", ugd_action, ugd_cost)
-    if attach_required:
-        add("attach", "Footpath/attachment repair required", attach_cost)
-    if swg_required:
-        add("swg", "Storm water drain repair required", swg_cost)
-    if jal_existing == "No" or jal_cond in REQUIRED_TIER:
-        add("jal", jal_action, jal_cost)
-    if elec_cond in REQUIRED_TIER:
-        add("elec", f"Electrical: {elec_cond} (rate TBD)", 0)
+    add("road", road_cond, road_action, road_cost)
+
+    ugd_bucket = "Required" if ugd_existing == "No" else cond_bucket(ugd_cond)
+    add("ugd", ugd_bucket, ugd_action, ugd_cost)
+
+    att_bucket = worst_condition(att_conds)
+    add("attach", att_bucket, action_for_cond(att_bucket, "Footpath/attachment"), attach_cost)
+
+    swg_bucket = worst_condition(swg_conds)
+    add("swg", swg_bucket, action_for_cond(swg_bucket, "Storm water drain"), swg_cost)
+
+    jal_bucket = "Required" if jal_existing == "No" else cond_bucket(jal_cond)
+    add("jal", jal_bucket, jal_action, jal_cost)
+
+    if has_light_data:
+        elec_bucket = cond_bucket(elec_cond)
+        add("elec", elec_bucket, f"Electrical: {elec_cond or 'Unknown'} (rate TBD)", 0)
+
     return items
 
 
@@ -193,21 +220,22 @@ def adapt_html_record(rec, ward):
     }
     total = round(num(rec.get("total_cost")))
 
-    priority_items = priority_items_for(
+    road_action = norm(rec.get("road_action")) or ("Convert to concrete" if material in ("Mud", "Gravel") else "No action")
+    items = category_items_for(
         ward, area, main, cross, map_link,
-        material=material, road_action=norm(rec.get("road_action")) or "Convert to concrete", road_cost=cost["road"],
-        ugd_existing=ugd_existing, ugd_cond=ugd_cond, ugd_action=norm(rec.get("ugd_action")) or "Action required", ugd_cost=cost["ugd"],
-        attach_required=any(c in REQUIRED_TIER for c in att_conds), attach_cost=cost["attach"],
-        swg_required=any(c in REQUIRED_TIER for c in swg_conds), swg_cost=cost["swg"],
-        jal_existing=jal_existing, jal_cond=jal_cond, jal_action=norm(rec.get("jal_action")) or "Action required", jal_cost=cost["jal"],
-        elec_cond=elec_cond,
+        road_cond=road_cond, road_action=road_action, road_cost=cost["road"],
+        ugd_existing=ugd_existing, ugd_cond=ugd_cond, ugd_action=norm(rec.get("ugd_action")) or "No action", ugd_cost=cost["ugd"],
+        att_conds=att_conds, attach_cost=cost["attach"],
+        swg_conds=swg_conds, swg_cost=cost["swg"],
+        jal_existing=jal_existing, jal_cond=jal_cond, jal_action=norm(rec.get("jal_action")) or "No action", jal_cost=cost["jal"],
+        elec_cond=elec_cond, has_light_data=has_light_data,
     )
 
     return {
         "cost": cost, "total": total, "road_cond": road_cond, "elec_bucket": elec_bucket,
         "has_light_data": has_light_data, "material": material, "area_sqm": area_sqm,
         "dist": dist, "width": width, "area": area, "main": main, "cross": cross, "map": map_link,
-        "priority_items": priority_items,
+        "items": items,
     }
 
 
@@ -266,7 +294,7 @@ def calc_row(d, ward):
         ("att2_sw", d.get("Attachment 2 Condition (S/W)"), d.get("Attachment 2 Width (m) (S/W)")),
     ]
     attach_cost = sum(att_cost(c, w) for _, c, w in att_sides)
-    attach_required = any(norm(c) in REQUIRED_TIER for _, c, _ in att_sides)
+    att_conds = [norm(c) for _, c, _ in att_sides]
 
     def swg_cost_fn(cond):
         cond = norm(cond)
@@ -275,7 +303,7 @@ def calc_row(d, ward):
     swg_ne_cond = norm(d.get("SWG Condition (N/E)"))
     swg_sw_cond = norm(d.get("SWG Condition (S/W)"))
     swg_cost = swg_cost_fn(swg_ne_cond) + swg_cost_fn(swg_sw_cond)
-    swg_required = swg_ne_cond in REQUIRED_TIER or swg_sw_cond in REQUIRED_TIER
+    swg_conds = [swg_ne_cond, swg_sw_cond]
 
     jal_existing = norm_yesno(d.get("Jalasiri Existing"))
     jal_cond = norm(d.get("Jalasiri Condition"))
@@ -311,21 +339,21 @@ def calc_row(d, ward):
     cross = norm(d.get("Road Name (Cross)")) or ""
     map_link = norm(d.get("Location (Google Maps link)")) or ""
 
-    priority_items = priority_items_for(
+    items = category_items_for(
         ward, area, main, cross, map_link,
-        material=material, road_action=road_action, road_cost=road_cost,
+        road_cond=road_cond, road_action=road_action, road_cost=road_cost,
         ugd_existing=ugd_existing, ugd_cond=ugd_cond, ugd_action=ugd_action, ugd_cost=ugd_cost,
-        attach_required=attach_required, attach_cost=attach_cost,
-        swg_required=swg_required, swg_cost=swg_cost,
+        att_conds=att_conds, attach_cost=attach_cost,
+        swg_conds=swg_conds, swg_cost=swg_cost,
         jal_existing=jal_existing, jal_cond=jal_cond, jal_action=jal_action, jal_cost=jal_cost,
-        elec_cond=elec_cond,
+        elec_cond=elec_cond, has_light_data=has_light_data,
     )
 
     return {
         "cost": cost, "total": total, "road_cond": road_cond, "elec_bucket": elec_bucket,
         "has_light_data": has_light_data, "material": material, "area_sqm": area_sqm,
         "dist": dist, "width": width, "area": area, "main": main, "cross": cross, "map": map_link,
-        "priority_items": priority_items,
+        "items": items,
     }
 
 
@@ -335,7 +363,7 @@ def build():
 
     wards_out = []
     roads_out = []
-    priority_out = []
+    items_out = []
 
     for ward in sorted(WARD_FILES):
         if ward in EXCEL_ONLY_WARDS or ward not in html_records:
@@ -380,7 +408,7 @@ def build():
                 "d": round(r["dist"], 1), "wd": round(r["width"], 2),
                 "cost": round(r["total"]), "map": r["map"],
             })
-            priority_out.extend(r["priority_items"])
+            items_out.extend(r["items"])
 
         total_cost = sum(cost_totals.values())
         areas_sorted = sorted(area_agg.values(), key=lambda a: a["cost"], reverse=True)
@@ -411,15 +439,16 @@ def build():
         print(f"ward {ward:>2} ({WARD_NAMES[ward]}, from {source}): {segments} segments, "
               f"{round(length)} m, total {round(total_cost):,}")
 
-    out = {"wards": wards_out, "roads": roads_out, "priority": priority_out}
+    out = {"wards": wards_out, "roads": roads_out, "workItems": items_out}
     out_path = os.path.join(ROOT, "src", "data", "wardData.json")
     with open(out_path, "w", encoding="utf-8") as f:
         json.dump(out, f, ensure_ascii=False, separators=(",", ":"))
 
+    required_count = sum(1 for i in items_out if i["cond"] == "Required")
     print(f"\nWrote {out_path}")
     print(f"Total wards: {len(wards_out)}")
     print(f"Total segments: {sum(w['segments'] for w in wards_out)}")
-    print(f"Total priority items: {len(priority_out)}")
+    print(f"Total work items: {len(items_out)} ({required_count} Required)")
     print(f"Grand total estimate: {sum(w['total'] for w in wards_out):,}")
 
 

@@ -4,21 +4,29 @@ import { AlertTriangle, ArrowLeft, ChevronDown, ExternalLink } from "lucide-reac
 import { SectionHead } from "./CategoryBreakdown";
 import { CountUp } from "./CountUp";
 import {
+  CONDITION_COLORS,
+  CONDITION_KEYS,
   COST_COLORS,
+  PRIORITY_CATS,
   PRIORITY_LABELS,
   inr,
   priority,
   priorityByWard,
   wardAccent,
   wards,
+  workItemsByWard,
+  type ConditionKey,
   type PriorityCat,
 } from "@/lib/ward-data";
 
 export function PriorityWorks() {
   const [open, setOpen] = useState(false);
   const [selectedWard, setSelectedWard] = useState<number | null>(null);
+  const [catFilter, setCatFilter] = useState<PriorityCat | "all">("all");
+  const [condFilter, setCondFilter] = useState<Set<ConditionKey>>(() => new Set<ConditionKey>(["Required"]));
 
   const byWard = useMemo(() => priorityByWard(), []);
+  const byWardAll = useMemo(() => workItemsByWard(), []);
   const totalCount = priority.length;
   const totalCost = priority.reduce((s, p) => s + p.cost, 0);
 
@@ -31,8 +39,20 @@ export function PriorityWorks() {
     [byWard],
   );
 
-  const selected = selectedWard !== null ? byWard.get(selectedWard) : undefined;
   const selectedMeta = selectedWard !== null ? wards.find((w) => w.ward === selectedWard) : undefined;
+  const wardItems = selectedWard !== null ? (byWardAll.get(selectedWard) ?? []) : [];
+  const filteredItems = wardItems
+    .filter((i) => (catFilter === "all" || i.cat === catFilter) && condFilter.has(i.cond))
+    .sort((a, b) => b.cost - a.cost);
+
+  function toggleCond(k: ConditionKey) {
+    setCondFilter((prev) => {
+      const next = new Set(prev);
+      if (next.has(k)) next.delete(k);
+      else next.add(k);
+      return next.size ? next : prev;
+    });
+  }
 
   const catColor: Record<PriorityCat, string> = {
     road: COST_COLORS.road,
@@ -133,53 +153,112 @@ export function PriorityWorks() {
                     <div className="mb-4 font-display text-base font-bold">
                       Ward {String(selectedWard).padStart(2, "0")} — {selectedMeta?.name}
                       <span className="ml-2 font-mono text-xs font-normal text-muted-foreground">
-                        {selected?.count} items · {inr(selected?.cost ?? 0)}
+                        {wardItems.length} tracked items
                       </span>
                     </div>
-                    <div className="space-y-2">
-                      {selected?.items
-                        .slice()
-                        .sort((a, b) => b.cost - a.cost)
-                        .map((item, idx) => (
-                          <div
-                            key={idx}
-                            className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3 rounded-xl border bg-surface p-3"
+
+                    <div className="flex flex-wrap gap-1.5">
+                      <button
+                        onClick={() => setCatFilter("all")}
+                        className="cursor-pointer rounded-full px-3 py-1.5 font-mono text-[11px] uppercase tracking-wider transition"
+                        style={
+                          catFilter === "all"
+                            ? { background: "var(--foreground)", color: "var(--background)" }
+                            : { background: "var(--surface)", color: "var(--muted-foreground)" }
+                        }
+                      >
+                        All categories
+                      </button>
+                      {PRIORITY_CATS.map((c) => (
+                        <button
+                          key={c}
+                          onClick={() => setCatFilter(c)}
+                          className="cursor-pointer rounded-full px-3 py-1.5 font-mono text-[11px] uppercase tracking-wider transition"
+                          style={
+                            catFilter === c
+                              ? { background: catColor[c], color: "var(--background)" }
+                              : {
+                                  background: `color-mix(in oklab, ${catColor[c]} 14%, transparent)`,
+                                  color: catColor[c],
+                                }
+                          }
+                        >
+                          {PRIORITY_LABELS[c]}
+                        </button>
+                      ))}
+                    </div>
+
+                    <div className="mt-2 flex flex-wrap gap-1.5">
+                      {CONDITION_KEYS.map((k) => {
+                        const active = condFilter.has(k);
+                        return (
+                          <button
+                            key={k}
+                            onClick={() => toggleCond(k)}
+                            className="cursor-pointer rounded-full border px-3 py-1 font-mono text-[10px] uppercase tracking-wider transition"
+                            style={{
+                              borderColor: CONDITION_COLORS[k],
+                              background: active
+                                ? `color-mix(in oklab, ${CONDITION_COLORS[k]} 20%, transparent)`
+                                : "transparent",
+                              color: active ? CONDITION_COLORS[k] : "var(--muted-foreground)",
+                              opacity: active ? 1 : 0.6,
+                            }}
                           >
-                            <span
-                              className="rounded-full px-2.5 py-1 font-mono text-[10px] uppercase tracking-wider"
-                              style={{
-                                background: `color-mix(in oklab, ${catColor[item.cat]} 16%, transparent)`,
-                                color: catColor[item.cat],
-                              }}
-                            >
-                              {PRIORITY_LABELS[item.cat]}
-                            </span>
-                            <div className="min-w-0">
-                              <div className="truncate text-sm font-medium">
-                                {item.main}
-                                {item.cross && <span className="text-muted-foreground"> · {item.cross}</span>}
-                              </div>
-                              <div className="truncate font-mono text-[10.5px] text-muted-foreground">
-                                {item.area} — {item.action}
-                              </div>
+                            {k}
+                          </button>
+                        );
+                      })}
+                    </div>
+
+                    <div className="mt-4 space-y-2">
+                      {filteredItems.map((item, idx) => (
+                        <div
+                          key={idx}
+                          className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3 rounded-xl border bg-surface p-3"
+                        >
+                          <span
+                            className="rounded-full px-2.5 py-1 font-mono text-[10px] uppercase tracking-wider"
+                            style={{
+                              background: `color-mix(in oklab, ${CONDITION_COLORS[item.cond]} 16%, transparent)`,
+                              color: CONDITION_COLORS[item.cond],
+                            }}
+                          >
+                            {item.cond}
+                          </span>
+                          <div className="min-w-0">
+                            <div className="truncate text-sm font-medium">
+                              <span style={{ color: catColor[item.cat] }}>{PRIORITY_LABELS[item.cat]}</span>
+                              {" — "}
+                              {item.main}
+                              {item.cross && <span className="text-muted-foreground"> · {item.cross}</span>}
                             </div>
-                            <div className="text-right">
-                              <div className="font-mono text-sm font-bold">
-                                {item.cost > 0 ? inr(item.cost) : "TBD"}
-                              </div>
-                              {item.map && (
-                                <a
-                                  href={item.map}
-                                  target="_blank"
-                                  rel="noreferrer"
-                                  className="mt-0.5 inline-flex items-center gap-1 font-mono text-[10px] text-muted-foreground hover:text-accent"
-                                >
-                                  Map <ExternalLink className="h-3 w-3" />
-                                </a>
-                              )}
+                            <div className="truncate font-mono text-[10.5px] text-muted-foreground">
+                              {item.area} — {item.action}
                             </div>
                           </div>
-                        ))}
+                          <div className="text-right">
+                            <div className="font-mono text-sm font-bold">
+                              {item.cost > 0 ? inr(item.cost) : "TBD"}
+                            </div>
+                            {item.map && (
+                              <a
+                                href={item.map}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="mt-0.5 inline-flex items-center gap-1 font-mono text-[10px] text-muted-foreground hover:text-accent"
+                              >
+                                Map <ExternalLink className="h-3 w-3" />
+                              </a>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                      {filteredItems.length === 0 && (
+                        <div className="rounded-xl border border-dashed p-6 text-center text-xs text-muted-foreground">
+                          No items match this filter for this ward.
+                        </div>
+                      )}
                     </div>
                   </div>
                 )}

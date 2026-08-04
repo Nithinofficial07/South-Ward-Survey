@@ -34,10 +34,13 @@ export type Road = {
 };
 
 export type PriorityCat = "road" | "ugd" | "attach" | "swg" | "jal" | "elec";
+export type ConditionKey = "Good" | "Maintenance" | "Required" | "Unknown";
 
-export type PriorityItem = {
+/** One row per (segment, category) — every segment's status in every category, not just urgent ones. */
+export type WorkItem = {
   ward: number;
   cat: PriorityCat;
+  cond: ConditionKey;
   area: string;
   main: string;
   cross: string;
@@ -48,7 +51,10 @@ export type PriorityItem = {
 
 export const wards = (raw as unknown as { wards: Ward[] }).wards;
 export const roads = (raw as unknown as { roads: Road[] }).roads;
-export const priority = (raw as unknown as { priority: PriorityItem[] }).priority;
+export const workItems = (raw as unknown as { workItems: WorkItem[] }).workItems;
+
+/** Items flagged Required — the urgent subset of workItems. */
+export const priority = workItems.filter((i) => i.cond === "Required");
 
 export const wardByNumber = new Map(wards.map((w) => [w.ward, w]));
 
@@ -57,7 +63,7 @@ export function wardName(w: number) {
 }
 
 export function priorityByWard() {
-  const map = new Map<number, { count: number; cost: number; items: PriorityItem[] }>();
+  const map = new Map<number, { count: number; cost: number; items: WorkItem[] }>();
   for (const w of wards) map.set(w.ward, { count: 0, cost: 0, items: [] });
   for (const p of priority) {
     const entry = map.get(p.ward);
@@ -65,6 +71,15 @@ export function priorityByWard() {
     entry.count += 1;
     entry.cost += p.cost;
     entry.items.push(p);
+  }
+  return map;
+}
+
+export function workItemsByWard() {
+  const map = new Map<number, WorkItem[]>();
+  for (const w of wards) map.set(w.ward, []);
+  for (const item of workItems) {
+    map.get(item.ward)?.push(item);
   }
   return map;
 }
@@ -77,6 +92,9 @@ export const PRIORITY_LABELS: Record<PriorityCat, string> = {
   jal: "Jalasiri Water Line",
   elec: "Electrical",
 };
+
+export const PRIORITY_CATS: PriorityCat[] = ["road", "ugd", "swg", "elec", "jal", "attach"];
+export const CONDITION_KEYS: ConditionKey[] = ["Required", "Maintenance", "Good", "Unknown"];
 
 export const COST_LABELS: Record<CostKey, string> = {
   road: "Road Surface",
