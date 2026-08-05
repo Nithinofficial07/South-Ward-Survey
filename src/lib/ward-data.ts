@@ -20,8 +20,38 @@ export type Ward = {
   areaCount: number;
 };
 
+export type AttachSlot = {
+  side: "N/E" | "S/W";
+  type: string | null;
+  width: number | null;
+  cond: string | null;
+  notes: string | null;
+  cost: number;
+};
+
+export type SwgSlot = {
+  side: "N/E" | "S/W";
+  type: string | null;
+  width: number | null;
+  cond: string | null;
+  notes: string | null;
+  cost: number;
+};
+
+export type RoadDetail = {
+  use: string | null;
+  sign: string | null;
+  road: { action: string; cost: number };
+  ugd: { existing: string | null; type: string | null; dia: number | null; cond: string | null; action: string; cost: number };
+  attach: AttachSlot[];
+  swg: SwgSlot[];
+  jal: { existing: string | null; cond: string | null; notes: string | null; action: string; cost: number };
+  elec: { lightType: string | null; cond: string | null; notes: string | null };
+};
+
 export type Road = {
   w: number;
+  no: number;
   a: string;
   m: string;
   c: string;
@@ -31,6 +61,7 @@ export type Road = {
   wd: number;
   cost: number;
   map: string;
+  detail: RoadDetail;
 };
 
 export type PriorityCat = "road" | "ugd" | "attach" | "swg" | "jal" | "elec";
@@ -39,6 +70,7 @@ export type ConditionKey = "Good" | "Maintenance" | "Required" | "Unknown";
 /** One row per (segment, category) — every segment's status in every category, not just urgent ones. */
 export type WorkItem = {
   ward: number;
+  no: number;
   cat: PriorityCat;
   cond: ConditionKey;
   area: string;
@@ -60,6 +92,12 @@ export const wardByNumber = new Map(wards.map((w) => [w.ward, w]));
 
 export function wardName(w: number) {
   return wardByNumber.get(w)?.name ?? `Ward ${w}`;
+}
+
+const roadByKey = new Map(roads.map((r) => [`${r.w}-${r.no}`, r]));
+
+export function findRoad(ward: number, no: number): Road | undefined {
+  return roadByKey.get(`${ward}-${no}`);
 }
 
 export function priorityByWard() {

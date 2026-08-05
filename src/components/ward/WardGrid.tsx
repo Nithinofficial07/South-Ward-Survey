@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { AnimatePresence, motion } from "motion/react";
 import { ChevronDown, MapPinned, Ruler, Signpost } from "lucide-react";
-import { SectionHead } from "./CategoryBreakdown";
 import { CountUp } from "./CountUp";
 import {
   CONDITION_COLORS,
@@ -9,7 +8,6 @@ import {
   COST_LABELS,
   inr,
   km,
-  totals,
   wardAccent,
   wards,
   type CostKey,
@@ -23,10 +21,39 @@ export function WardGrid() {
   return (
     <section id="wards" className="relative bg-surface py-24">
       <div className="mx-auto max-w-6xl px-6">
-        <SectionHead
-          eyebrow="02 — Ward by ward"
-          title="Highlights"
-        />
+        <div className="flex flex-col items-start justify-between gap-8 sm:flex-row sm:items-center">
+          <motion.div
+            initial={{ opacity: 0, y: 22 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true, margin: "-80px" }}
+            transition={{ duration: 0.55 }}
+            className="max-w-2xl"
+          >
+            <div className="font-mono text-[11px] uppercase tracking-[0.2em] text-accent">
+              02 — Ward by ward
+            </div>
+            <h2 className="mt-3 text-3xl font-bold sm:text-4xl">Ward Development Matrix</h2>
+            <p className="mt-3 text-base leading-relaxed text-muted-foreground">
+              Ward-wise civic works overview with condition status, investment estimates, and
+              street-level breakdown across the constituency.
+            </p>
+          </motion.div>
+
+          <motion.div
+            initial={{ opacity: 0, x: 24 }}
+            whileInView={{ opacity: 1, x: 0 }}
+            viewport={{ once: true, margin: "-80px" }}
+            transition={{ duration: 0.55, delay: 0.1 }}
+            className="relative shrink-0"
+          >
+            <div className="absolute inset-0 -z-10 rounded-full bg-[var(--teal)] opacity-20 blur-3xl" />
+            <img
+              src="/assets/ward-lead.png"
+              alt=""
+              className="h-40 w-auto object-contain drop-shadow-xl sm:h-48"
+            />
+          </motion.div>
+        </div>
 
         <div className="mt-12 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
           {wards.map((w, i) => (

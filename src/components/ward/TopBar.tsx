@@ -24,9 +24,10 @@ export function TopBar() {
         <div className="mx-auto grid max-w-6xl grid-cols-[minmax(0,1fr)_auto] items-center gap-4 px-6 py-4">
           <Link
             to="/"
-            className="truncate rounded-full border border-[oklch(1_0_0/0.2)] bg-[oklch(0.2_0.04_210/0.75)] px-4 py-2 font-display text-sm font-bold text-[oklch(0.97_0.02_180)] backdrop-blur-md"
+            className="flex min-w-0 items-center gap-2 truncate rounded-full border border-[oklch(1_0_0/0.2)] bg-[oklch(0.2_0.04_210/0.75)] py-1.5 pl-2 pr-4 font-display text-sm font-bold text-[oklch(0.97_0.02_180)] backdrop-blur-md"
           >
-            DVG SOUTH · WARD DATA
+            <img src="/assets/app-logo.webp" alt="" className="h-7 w-auto shrink-0" />
+            <span className="truncate">DVG SOUTH · WARD DATA</span>
           </Link>
           <nav className="hidden gap-1 rounded-full border border-[oklch(1_0_0/0.2)] bg-[oklch(0.2_0.04_210/0.55)] px-2 py-1.5 backdrop-blur-md sm:flex">
             {LINKS.map((l) => {
