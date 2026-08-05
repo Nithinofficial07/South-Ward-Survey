@@ -40,7 +40,7 @@ export function CategoryBreakdown() {
   return (
     <section id="investment" className="relative mx-auto max-w-6xl px-6 py-24">
       <SectionHead
-        eyebrow="01 — Where the money goes"
+        eyebrow="02 — Where the money goes"
         title="Summary of Estimation"
       />
 
