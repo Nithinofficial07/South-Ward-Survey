@@ -2,12 +2,14 @@ import { useMemo, useState } from "react";
 import { motion } from "motion/react";
 import { ExternalLink, Search } from "lucide-react";
 import { SectionHead } from "./CategoryBreakdown";
-import { CONDITION_COLORS, inr, roads, wardAccent, wards } from "@/lib/ward-data";
+import { RoadDetailDialog } from "./RoadDetailDialog";
+import { CONDITION_COLORS, inr, roads, wardAccent, wards, type Road } from "@/lib/ward-data";
 
 export function RoadRegister() {
   const [q, setQ] = useState("");
   const [ward, setWard] = useState<number | "all">("all");
   const [cond, setCond] = useState<string>("all");
+  const [selectedRoad, setSelectedRoad] = useState<Road | null>(null);
 
   const filtered = useMemo(() => {
     const needle = q.trim().toLowerCase();
@@ -77,7 +79,8 @@ export function RoadRegister() {
               viewport={{ once: true, margin: "-40px" }}
               transition={{ duration: 0.35, delay: Math.min(i, 8) * 0.03 }}
               whileHover={{ x: 6 }}
-              className="shadow-card grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-4 rounded-2xl border bg-card p-4"
+              onClick={() => setSelectedRoad(r)}
+              className="shadow-card grid cursor-pointer grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-4 rounded-2xl border bg-card p-4"
               style={{ borderLeft: `4px solid ${wardAccent(r.w)}` }}
             >
               <div
@@ -117,6 +120,7 @@ export function RoadRegister() {
                     href={r.map}
                     target="_blank"
                     rel="noreferrer"
+                    onClick={(e) => e.stopPropagation()}
                     className="mt-1 inline-flex items-center gap-1 font-mono text-[10px] text-muted-foreground hover:text-accent"
                   >
                     Map <ExternalLink className="h-3 w-3" />
@@ -135,6 +139,8 @@ export function RoadRegister() {
           Showing top {filtered.length} of {roads.length.toLocaleString("en-IN")} surveyed segments
         </p>
       </div>
+
+      <RoadDetailDialog road={selectedRoad} onClose={() => setSelectedRoad(null)} />
     </section>
   );
 }

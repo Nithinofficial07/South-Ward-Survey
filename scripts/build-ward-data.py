@@ -79,6 +79,14 @@ def norm(v):
     return s
 
 
+def first(d, *keys):
+    for k in keys:
+        v = norm(d.get(k))
+        if v is not None:
+            return v
+    return None
+
+
 def norm_yesno(v):
     s = norm(v)
     if s is None:
@@ -125,6 +133,25 @@ def action_for_cond(cond, label):
     if cond == "Good":
         return "No action"
     return "Not assessed"
+
+
+def make_detail(*, use, sign, road_action, road_cost,
+                 ugd_existing, ugd_type, ugd_dia, ugd_cond, ugd_action, ugd_cost,
+                 attach_slots, swg_slots,
+                 jal_existing, jal_cond, jal_notes, jal_action, jal_cost,
+                 light_type, elec_cond, elec_notes):
+    """Full per-segment detail (every raw field) for the road detail dialog."""
+    return {
+        "use": use, "sign": sign,
+        "road": {"action": road_action, "cost": road_cost},
+        "ugd": {"existing": ugd_existing, "type": ugd_type, "dia": ugd_dia, "cond": ugd_cond,
+                "action": ugd_action, "cost": ugd_cost},
+        "attach": attach_slots,
+        "swg": swg_slots,
+        "jal": {"existing": jal_existing, "cond": jal_cond, "notes": jal_notes,
+                "action": jal_action, "cost": jal_cost},
+        "elec": {"lightType": light_type, "cond": elec_cond, "notes": elec_notes},
+    }
 
 
 def category_items_for(ward, area, main, cross, map_link, *, road_cond, road_action, road_cost,
@@ -205,6 +232,23 @@ def adapt_html_record(rec, ward):
                  norm(rec.get("att1_sw_cond")), norm(rec.get("att2_sw_cond"))]
     swg_conds = [norm(rec.get("swg_ne_cond")), norm(rec.get("swg_sw_cond"))]
 
+    attach_slots = [
+        {"side": "N/E", "type": norm(rec.get("att1_ne_type")), "width": num(rec.get("att1_ne_width")) or None,
+         "cond": norm(rec.get("att1_ne_cond")), "notes": norm(rec.get("att1_ne_notes")), "cost": round(num(rec.get("att1_ne_cost")))},
+        {"side": "N/E", "type": norm(rec.get("att2_ne_type")), "width": num(rec.get("att2_ne_width")) or None,
+         "cond": norm(rec.get("att2_ne_cond")), "notes": norm(rec.get("att2_ne_notes")), "cost": round(num(rec.get("att2_ne_cost")))},
+        {"side": "S/W", "type": norm(rec.get("att1_sw_type")), "width": num(rec.get("att1_sw_width")) or None,
+         "cond": norm(rec.get("att1_sw_cond")), "notes": norm(rec.get("att1_sw_notes")), "cost": round(num(rec.get("att1_sw_cost")))},
+        {"side": "S/W", "type": norm(rec.get("att2_sw_type")), "width": num(rec.get("att2_sw_width")) or None,
+         "cond": norm(rec.get("att2_sw_cond")), "notes": norm(rec.get("att2_sw_notes")), "cost": round(num(rec.get("att2_sw_cost")))},
+    ]
+    swg_slots = [
+        {"side": "N/E", "type": norm(rec.get("swg_ne_type")), "width": num(rec.get("swg_ne_width")) or None,
+         "cond": norm(rec.get("swg_ne_cond")), "notes": norm(rec.get("swg_ne_notes")), "cost": round(num(rec.get("swg_ne_cost")))},
+        {"side": "S/W", "type": None, "width": num(rec.get("swg_sw_width")) or None,
+         "cond": norm(rec.get("swg_sw_cond")), "notes": norm(rec.get("swg_sw_notes")), "cost": round(num(rec.get("swg_sw_cost")))},
+    ]
+
     area = norm(rec.get("area")) or ""
     main = norm(rec.get("main")) or ""
     cross = norm(rec.get("cross")) or ""
@@ -231,11 +275,22 @@ def adapt_html_record(rec, ward):
         elec_cond=elec_cond, has_light_data=has_light_data,
     )
 
+    detail = make_detail(
+        use=norm(rec.get("use")), sign=norm(rec.get("sign")),
+        road_action=road_action, road_cost=cost["road"],
+        ugd_existing=ugd_existing, ugd_type=norm(rec.get("ugd_type")), ugd_dia=num(rec.get("ugd_dia")) or None,
+        ugd_cond=ugd_cond, ugd_action=norm(rec.get("ugd_action")) or "No action", ugd_cost=cost["ugd"],
+        attach_slots=attach_slots, swg_slots=swg_slots,
+        jal_existing=jal_existing, jal_cond=jal_cond, jal_notes=norm(rec.get("jal_notes")),
+        jal_action=norm(rec.get("jal_action")) or "No action", jal_cost=cost["jal"],
+        light_type=norm(rec.get("light_type")), elec_cond=elec_cond, elec_notes=norm(rec.get("elec_notes")),
+    )
+
     return {
         "cost": cost, "total": total, "road_cond": road_cond, "elec_bucket": elec_bucket,
         "has_light_data": has_light_data, "material": material, "area_sqm": area_sqm,
         "dist": dist, "width": width, "area": area, "main": main, "cross": cross, "map": map_link,
-        "items": items,
+        "items": items, "detail": detail,
     }
 
 
@@ -288,13 +343,19 @@ def calc_row(d, ward):
         return round(ATT_RATE[cond] * w * dist) if (cond in ATT_RATE and w) else 0
 
     att_sides = [
-        ("att1_ne", d.get("Attachment 1 Condition"), d.get("Attachment 1 Width (m)")),
-        ("att2_ne", d.get("Attachment 2 Condition"), d.get("Attachment 2 Width (m)")),
-        ("att1_sw", d.get("Attachment 1 Condition (S/W)"), d.get("Attachment 1 Width (m) (S/W)")),
-        ("att2_sw", d.get("Attachment 2 Condition (S/W)"), d.get("Attachment 2 Width (m) (S/W)")),
+        ("N/E", "Attachment 1 Type", "Attachment 1 Width (m)", "Attachment 1 Condition", "Attachment 1 Notes"),
+        ("N/E", "Attachment 2 Type", "Attachment 2 Width (m)", "Attachment 2 Condition", "Attachment 2 Notes"),
+        ("S/W", "Attachment 1 Type (S/W)", "Attachment 1 Width (m) (S/W)", "Attachment 1 Condition (S/W)", "Attachment 1 Notes (S/W)"),
+        ("S/W", "Attachment 2 Type (S/W)", "Attachment 2 Width (m) (S/W)", "Attachment 2 Condition (S/W)", "Attachment 2 Notes (S/W)"),
     ]
-    attach_cost = sum(att_cost(c, w) for _, c, w in att_sides)
-    att_conds = [norm(c) for _, c, _ in att_sides]
+    attach_cost = sum(att_cost(d.get(cond_k), d.get(width_k)) for _, _, width_k, cond_k, _ in att_sides)
+    att_conds = [norm(d.get(cond_k)) for _, _, _, cond_k, _ in att_sides]
+    attach_slots = [
+        {"side": side, "type": norm(d.get(type_k)), "width": num(d.get(width_k)) or None,
+         "cond": norm(d.get(cond_k)), "notes": norm(d.get(notes_k)),
+         "cost": att_cost(d.get(cond_k), d.get(width_k))}
+        for side, type_k, width_k, cond_k, notes_k in att_sides
+    ]
 
     def swg_cost_fn(cond):
         cond = norm(cond)
@@ -304,6 +365,12 @@ def calc_row(d, ward):
     swg_sw_cond = norm(d.get("SWG Condition (S/W)"))
     swg_cost = swg_cost_fn(swg_ne_cond) + swg_cost_fn(swg_sw_cond)
     swg_conds = [swg_ne_cond, swg_sw_cond]
+    swg_slots = [
+        {"side": "N/E", "type": norm(d.get("SWG Type (N/E)")), "width": num(d.get("SWG Width (m) (N/E)")) or None,
+         "cond": swg_ne_cond, "notes": norm(d.get("SWG Notes (N/E)")), "cost": swg_cost_fn(swg_ne_cond)},
+        {"side": "S/W", "type": None, "width": num(d.get("SWG Width (m) (S/W)")) or None,
+         "cond": swg_sw_cond, "notes": norm(d.get("SWG Notes (S/W)")), "cost": swg_cost_fn(swg_sw_cond)},
+    ]
 
     jal_existing = norm_yesno(d.get("Jalasiri Existing"))
     jal_cond = norm(d.get("Jalasiri Condition"))
@@ -349,11 +416,23 @@ def calc_row(d, ward):
         elec_cond=elec_cond, has_light_data=has_light_data,
     )
 
+    detail = make_detail(
+        use=norm(d.get("Use")), sign=sign,
+        road_action=road_action, road_cost=road_cost,
+        ugd_existing=ugd_existing, ugd_type=norm(d.get("UGD Type")),
+        ugd_dia=num(first(d, "UGD Pipe Dia (mm)", "UGD Pipe Dia (m)")) or None,
+        ugd_cond=ugd_cond, ugd_action=ugd_action, ugd_cost=ugd_cost,
+        attach_slots=attach_slots, swg_slots=swg_slots,
+        jal_existing=jal_existing, jal_cond=jal_cond, jal_notes=norm(d.get("Jalasiri Note")),
+        jal_action=jal_action, jal_cost=jal_cost,
+        light_type=norm(d.get("Light Type")), elec_cond=elec_cond, elec_notes=norm(d.get("Electrical Notes")),
+    )
+
     return {
         "cost": cost, "total": total, "road_cond": road_cond, "elec_bucket": elec_bucket,
         "has_light_data": has_light_data, "material": material, "area_sqm": area_sqm,
         "dist": dist, "width": width, "area": area, "main": main, "cross": cross, "map": map_link,
-        "items": items,
+        "items": items, "detail": detail,
     }
 
 
@@ -384,7 +463,7 @@ def build():
         materials_tally = {}
         area_agg = {}
 
-        for r in normalized:
+        for idx, r in enumerate(normalized, start=1):
             segments += 1
             length += r["dist"]
             area_sqm_total += r["area_sqm"]
@@ -403,11 +482,14 @@ def build():
             agg["length"] += r["dist"]
 
             roads_out.append({
-                "w": ward, "a": r["area"], "m": r["main"], "c": r["cross"],
+                "w": ward, "no": idx, "a": r["area"], "m": r["main"], "c": r["cross"],
                 "mat": r["material"] or "", "cond": r["road_cond"],
                 "d": round(r["dist"], 1), "wd": round(r["width"], 2),
                 "cost": round(r["total"]), "map": r["map"],
+                "detail": r["detail"],
             })
+            for item in r["items"]:
+                item["no"] = idx
             items_out.extend(r["items"])
 
         total_cost = sum(cost_totals.values())

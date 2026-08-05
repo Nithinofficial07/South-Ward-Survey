@@ -3,12 +3,14 @@ import { AnimatePresence, motion } from "motion/react";
 import { AlertTriangle, ArrowLeft, ChevronDown, ExternalLink } from "lucide-react";
 import { SectionHead } from "./CategoryBreakdown";
 import { CountUp } from "./CountUp";
+import { RoadDetailDialog } from "./RoadDetailDialog";
 import {
   CONDITION_COLORS,
   CONDITION_KEYS,
   COST_COLORS,
   PRIORITY_CATS,
   PRIORITY_LABELS,
+  findRoad,
   inr,
   priority,
   priorityByWard,
@@ -17,6 +19,7 @@ import {
   workItemsByWard,
   type ConditionKey,
   type PriorityCat,
+  type Road,
 } from "@/lib/ward-data";
 
 export function PriorityWorks() {
@@ -24,6 +27,7 @@ export function PriorityWorks() {
   const [selectedWard, setSelectedWard] = useState<number | null>(null);
   const [catFilter, setCatFilter] = useState<PriorityCat | "all">("all");
   const [condFilter, setCondFilter] = useState<Set<ConditionKey>>(() => new Set<ConditionKey>(["Required"]));
+  const [selectedRoad, setSelectedRoad] = useState<Road | null>(null);
 
   const byWard = useMemo(() => priorityByWard(), []);
   const byWardAll = useMemo(() => workItemsByWard(), []);
@@ -213,9 +217,10 @@ export function PriorityWorks() {
 
                     <div className="mt-4 space-y-2">
                       {filteredItems.map((item, idx) => (
-                        <div
+                        <button
                           key={idx}
-                          className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3 rounded-xl border bg-surface p-3"
+                          onClick={() => setSelectedRoad(findRoad(item.ward, item.no) ?? null)}
+                          className="grid w-full cursor-pointer grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3 rounded-xl border bg-surface p-3 text-left transition hover:-translate-y-0.5 hover:border-accent"
                         >
                           <span
                             className="rounded-full px-2.5 py-1 font-mono text-[10px] uppercase tracking-wider"
@@ -242,17 +247,12 @@ export function PriorityWorks() {
                               {item.cost > 0 ? inr(item.cost) : "TBD"}
                             </div>
                             {item.map && (
-                              <a
-                                href={item.map}
-                                target="_blank"
-                                rel="noreferrer"
-                                className="mt-0.5 inline-flex items-center gap-1 font-mono text-[10px] text-muted-foreground hover:text-accent"
-                              >
-                                Map <ExternalLink className="h-3 w-3" />
-                              </a>
+                              <span className="mt-0.5 inline-flex items-center gap-1 font-mono text-[10px] text-muted-foreground">
+                                Details <ExternalLink className="h-3 w-3" />
+                              </span>
                             )}
                           </div>
-                        </div>
+                        </button>
                       ))}
                       {filteredItems.length === 0 && (
                         <div className="rounded-xl border border-dashed p-6 text-center text-xs text-muted-foreground">
@@ -267,6 +267,8 @@ export function PriorityWorks() {
           )}
         </AnimatePresence>
       </motion.div>
+
+      <RoadDetailDialog road={selectedRoad} onClose={() => setSelectedRoad(null)} />
     </section>
   );
 }
