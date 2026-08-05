@@ -70,7 +70,7 @@ export function Hero() {
             <img
               src="/assets/ward-lead.png"
               alt=""
-              className="h-48 w-auto object-contain drop-shadow-2xl sm:h-56"
+              className="h-64 w-auto object-contain drop-shadow-2xl sm:h-80"
             />
           </motion.div>
         </div>
