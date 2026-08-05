@@ -23,6 +23,7 @@ export function Hero() {
       <div className="animate-float-slow absolute -top-40 -left-32 h-[26rem] w-[26rem] rounded-full bg-[var(--lime)] opacity-25 blur-3xl" />
       <div className="animate-float-slow absolute -right-24 top-24 h-[22rem] w-[22rem] rounded-full bg-[var(--amber)] opacity-25 blur-3xl [animation-delay:2s]" />
       <div className="animate-spin-slow absolute -bottom-52 left-1/3 h-[30rem] w-[30rem] rounded-full bg-[var(--violet)] opacity-20 blur-3xl" />
+      <div className="animate-pulse-glow absolute -bottom-16 right-1/4 h-64 w-64 rounded-full bg-[var(--coral)] blur-3xl" />
 
       <motion.div
         style={{ y, opacity: fade }}
@@ -46,9 +47,9 @@ export function Hero() {
               transition={{ duration: 0.7, delay: 0.08 }}
               className="mt-6 max-w-4xl text-4xl font-bold leading-[1.05] text-[oklch(1_0_0)] sm:text-6xl lg:text-7xl"
             >
-              Ward Infrastructure
-              <span className="block bg-gradient-to-r from-[var(--lime)] via-[var(--amber)] to-[var(--coral)] bg-clip-text text-transparent">
-                Register & Investment Map
+              Ward Development
+              <span className="animate-shimmer-text block bg-gradient-to-r from-[var(--lime)] via-[var(--amber)] to-[var(--coral)] bg-clip-text text-transparent">
+                Matrix
               </span>
             </motion.h1>
 
@@ -68,14 +69,36 @@ export function Hero() {
             initial={{ opacity: 0, x: 24 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.7, delay: 0.2 }}
-            className="relative shrink-0 self-center lg:self-end"
+            className="relative shrink-0 self-center text-center lg:self-end"
           >
-            <div className="absolute inset-0 -z-10 rounded-full bg-[var(--lime)] opacity-25 blur-3xl" />
-            <img
+            <div className="animate-pulse-glow absolute inset-0 -z-10 rounded-full bg-[var(--lime)]" />
+            <motion.img
               src="/assets/ward-lead.png"
-              alt=""
-              className="h-64 w-auto object-contain drop-shadow-2xl sm:h-80"
+              alt="Sri Samarth Shamanur Mallikarjun"
+              animate={{ y: [0, -14, 0] }}
+              transition={{ repeat: Infinity, duration: 5, ease: "easeInOut" }}
+              className="h-72 w-auto object-contain drop-shadow-2xl sm:h-[26rem]"
             />
+
+            <motion.div
+              initial={{ opacity: 0, y: 16 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6, delay: 0.6 }}
+              className="mt-2"
+            >
+              <div className="font-display text-lg font-bold text-[oklch(1_0_0)] sm:text-xl">
+                Sri Samarth Shamanur Mallikarjun
+              </div>
+              <div className="mt-1 font-mono text-[10px] uppercase tracking-[0.18em] text-[oklch(0.88_0.04_170)] sm:text-[11px]">
+                MLA, Davanagere South Constituency
+              </div>
+              <motion.div
+                initial={{ scaleX: 0 }}
+                animate={{ scaleX: 1 }}
+                transition={{ duration: 0.7, delay: 0.85, ease: [0.22, 1, 0.36, 1] }}
+                className="mx-auto mt-2 h-[2px] w-16 origin-center rounded-full bg-gradient-to-r from-[var(--lime)] via-[var(--amber)] to-[var(--coral)]"
+              />
+            </motion.div>
           </motion.div>
         </div>
 

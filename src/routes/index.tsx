@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { Hero } from "@/components/ward/Hero";
+import { WardHighlights } from "@/components/ward/WardHighlights";
 import { TopWardsMarquee } from "@/components/ward/Footer";
 import { totals } from "@/lib/ward-data";
 
@@ -27,6 +28,7 @@ function Index() {
   return (
     <main>
       <Hero />
+      <WardHighlights />
       <TopWardsMarquee />
     </main>
   );
