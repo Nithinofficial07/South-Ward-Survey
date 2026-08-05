@@ -3,7 +3,11 @@ import { useRef } from "react";
 import { ArrowDown, MapPinned } from "lucide-react";
 import { Link } from "@tanstack/react-router";
 import { CountUp } from "./CountUp";
-import { inr, km, totals } from "@/lib/ward-data";
+import { inr, totals } from "@/lib/ward-data";
+
+function ha(n: number) {
+  return `${(n / 10000).toFixed(1)} ha`;
+}
 
 const MotionLink = motion.create(Link);
 
@@ -70,7 +74,7 @@ export function Hero() {
             <img
               src="/assets/ward-lead.png"
               alt=""
-              className="h-48 w-auto object-contain drop-shadow-2xl sm:h-56"
+              className="h-64 w-auto object-contain drop-shadow-2xl sm:h-80"
             />
           </motion.div>
         </div>
@@ -79,19 +83,18 @@ export function Hero() {
           initial={{ opacity: 0, y: 24 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.7, delay: 0.24 }}
-          className="mt-12 grid gap-4 sm:grid-cols-2 lg:grid-cols-4"
+          className="mt-12 grid gap-4 sm:grid-cols-3"
         >
           {[
-            { label: "Wards Surveyed", value: totals.wards, fmt: (n: number) => Math.round(n).toString() },
-            { label: "Road Segments", value: totals.segments },
-            { label: "Road Network", value: totals.length, fmt: km },
-            { label: "Estimated Works", value: totals.cost, fmt: inr },
+            { label: "Total Roads", value: totals.segments },
+            { label: "Total Area", value: totals.areaSqm, fmt: ha },
+            { label: "Total Investment", value: totals.cost, fmt: inr },
           ].map((s, i) => (
             <motion.div
               key={s.label}
               whileHover={{ y: -6 }}
               className="rounded-2xl border border-[oklch(1_0_0/0.18)] bg-[oklch(1_0_0/0.1)] p-5 backdrop-blur-md"
-              style={{ borderTopColor: ["var(--lime)", "var(--amber)", "var(--coral)", "var(--sky)"][i], borderTopWidth: 3 }}
+              style={{ borderTopColor: ["var(--lime)", "var(--amber)", "var(--coral)"][i], borderTopWidth: 3 }}
             >
               <div className="font-mono text-[10px] uppercase tracking-[0.16em] text-[oklch(0.88_0.04_170)]">
                 {s.label}

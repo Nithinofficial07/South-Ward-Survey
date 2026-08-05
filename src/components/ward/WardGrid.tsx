@@ -50,7 +50,7 @@ export function WardGrid() {
             <img
               src="/assets/ward-lead.png"
               alt=""
-              className="h-40 w-auto object-contain drop-shadow-xl sm:h-48"
+              className="h-56 w-auto object-contain drop-shadow-xl sm:h-72"
             />
           </motion.div>
         </div>
