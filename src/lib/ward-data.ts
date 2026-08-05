@@ -85,15 +85,15 @@ export function workItemsByWard() {
 }
 
 export const PRIORITY_LABELS: Record<PriorityCat, string> = {
-  road: "Road Surface",
-  ugd: "Underground Drain",
-  attach: "Footpath / Attachment",
-  swg: "Storm Water Drain",
-  jal: "Jalasiri Water Line",
+  road: "Road",
+  ugd: "UGD",
+  attach: "Attachment",
+  swg: "SWG",
+  jal: "Jalasiri",
   elec: "Electrical",
 };
 
-export const PRIORITY_CATS: PriorityCat[] = ["road", "ugd", "swg", "elec", "jal", "attach"];
+export const PRIORITY_CATS: PriorityCat[] = ["road", "attach", "swg", "ugd", "jal", "elec"];
 export const CONDITION_KEYS: ConditionKey[] = ["Required", "Maintenance", "Good", "Unknown"];
 
 export const COST_LABELS: Record<CostKey, string> = {

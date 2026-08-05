@@ -67,8 +67,7 @@ export function PriorityWorks() {
     <section className="relative mx-auto max-w-6xl px-6 pb-24">
       <SectionHead
         eyebrow="05 — What needs attention first"
-        title="Top priority works"
-        sub="Segments flagged Required (or missing entirely) across every category — the work that can't wait for the routine maintenance cycle."
+        title="Overview"
       />
 
       <motion.div

@@ -25,8 +25,7 @@ export function WardGrid() {
       <div className="mx-auto max-w-6xl px-6">
         <SectionHead
           eyebrow="02 — Ward by ward"
-          title={`${totals.wards} wards, one colour-coded register`}
-          sub="Tap any ward card to unfold its condition split, cost breakdown and busiest localities."
+          title="Highlights"
         />
 
         <div className="mt-12 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">

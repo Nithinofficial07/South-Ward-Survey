@@ -56,8 +56,7 @@ export function SiteFooter() {
           <div className="grid grid-cols-2 gap-4">
             {[
               { l: "Wards", v: totals.wards },
-              { l: "Segments", v: totals.segments.toLocaleString("en-IN") },
-              { l: "Network", v: km(totals.length) },
+              { l: "TOTAL AREA", v: km(totals.length) },
               { l: "Estimate", v: inr(totals.cost) },
             ].map((s) => (
               <div key={s.l} className="rounded-2xl bg-surface p-4">

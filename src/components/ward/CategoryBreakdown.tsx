@@ -41,8 +41,7 @@ export function CategoryBreakdown() {
     <section id="investment" className="relative mx-auto max-w-6xl px-6 py-24">
       <SectionHead
         eyebrow="01 — Where the money goes"
-        title="Investment by work category"
-        sub="Every rupee in the register, grouped by the kind of civic work it pays for. Tap a category to see the ward-wise split."
+        title="Summary of estimation"
       />
 
       <div className="mt-12 grid gap-10 lg:grid-cols-[1.1fr_0.9fr]">
