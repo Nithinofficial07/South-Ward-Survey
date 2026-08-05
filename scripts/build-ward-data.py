@@ -1,12 +1,14 @@
 """Rebuild src/data/wardData.json from the reference dashboard + raw Excel files.
 
-Primary source: the ALL_DATA array embedded in "DVG SOUTH DATA DASHBOAD.html"
-(the reference dashboard) — used verbatim, including its already-computed
-per-segment costs, for every ward it covers (18 of the 20 wards).
+Primary source: the raw survey fields in the ALL_DATA array embedded in
+"DVG SOUTH DATA DASHBOAD.html" (the reference dashboard), for every ward it
+covers (18 of the 20 wards). Wards 9 and 21 aren't in that file at all, so
+those two are parsed from their raw survey Excel files instead.
 
-Wards 9 and 21 are not present in that reference file at all, so those two
-are parsed from their raw survey Excel files instead, using the exact same
-cost-rate formulas as the reference dashboard (DEFAULT_RATES / calcRecordCosts).
+Every cost is computed here from the RATES table below — never trusted from
+the HTML's baked-in cost fields — so editing RATES and rerunning this script
+recalculates the whole register uniformly, matching the reference
+dashboard's "Apply Rates" behaviour.
 
 Run with: python scripts/build-ward-data.py
 """
@@ -53,9 +55,9 @@ WARD_NAMES = {
 
 RATES = dict(
     road_convert=3500,
-    ugd_maintenance=320, ugd_outdated=480, ugd_required=800, ugd_additional=1200, ugd_new=1500,
+    ugd_maintenance=1067, ugd_outdated=1600, ugd_required=2667, ugd_additional=4000, ugd_new=5000,
     swg_maintenance=400, swg_outdated=600, swg_required=1000, swg_additional=1500,
-    att_maintenance=480, att_outdated=720, att_required=1200, att_additional=1800,
+    att_maintenance=1150, att_outdated=1690, att_required=2876, att_additional=4313,
     jal_maintenance=5000, jal_reactivation=10000, jal_new=10000,
     signage=5000,
 )
@@ -214,75 +216,114 @@ def load_html_records():
 
 
 def adapt_html_record(rec, ward):
+    """Recomputes every cost from the current RATES table using the raw survey
+    fields in the record — never trusts the HTML's baked-in cost fields, so
+    changing RATES recalculates all 20 wards uniformly, not just the 2 wards
+    sourced from Excel."""
     dist = num(rec.get("dist"))
     width = num(rec.get("width"))
     area_sqm = num(rec.get("area_sqm")) or round(dist * width, 2)
     material = norm(rec.get("material"))
     road_cond = cond_bucket(norm(rec.get("cond")))
 
+    road_cost, road_action = 0, "No action"
+    if material in ("Mud", "Gravel"):
+        road_action = "Convert to concrete"
+        road_cost = round(area_sqm * RATES["road_convert"])
+
     ugd_existing = norm_yesno(rec.get("ugd_existing"))
     ugd_cond = norm(rec.get("ugd_cond"))
+    ugd_cost, ugd_action = 0, "No action"
+    if ugd_existing == "No":
+        ugd_action = "New installation"
+        ugd_cost = round(RATES["ugd_new"] * dist)
+    elif ugd_cond in UGD_RATE:
+        ugd_action = f"Repair ({ugd_cond})"
+        ugd_cost = round(UGD_RATE[ugd_cond] * dist)
+
+    def att_cost(cond, w):
+        cond = norm(cond)
+        w = num(w)
+        return round(ATT_RATE[cond] * w * dist) if (cond in ATT_RATE and w) else 0
+
+    att_sides = [
+        ("N/E", "att1_ne_type", "att1_ne_width", "att1_ne_cond", "att1_ne_notes"),
+        ("N/E", "att2_ne_type", "att2_ne_width", "att2_ne_cond", "att2_ne_notes"),
+        ("S/W", "att1_sw_type", "att1_sw_width", "att1_sw_cond", "att1_sw_notes"),
+        ("S/W", "att2_sw_type", "att2_sw_width", "att2_sw_cond", "att2_sw_notes"),
+    ]
+    attach_cost = sum(att_cost(rec.get(cond_k), rec.get(width_k)) for _, _, width_k, cond_k, _ in att_sides)
+    att_conds = [norm(rec.get(cond_k)) for _, _, _, cond_k, _ in att_sides]
+    attach_slots = [
+        {"side": side, "type": norm(rec.get(type_k)), "width": num(rec.get(width_k)) or None,
+         "cond": norm(rec.get(cond_k)), "notes": norm(rec.get(notes_k)),
+         "cost": att_cost(rec.get(cond_k), rec.get(width_k))}
+        for side, type_k, width_k, cond_k, notes_k in att_sides
+    ]
+
+    def swg_cost_fn(cond):
+        cond = norm(cond)
+        return round(SWG_RATE[cond] * dist) if cond in SWG_RATE else 0
+
+    swg_ne_cond = norm(rec.get("swg_ne_cond"))
+    swg_sw_cond = norm(rec.get("swg_sw_cond"))
+    swg_cost = swg_cost_fn(swg_ne_cond) + swg_cost_fn(swg_sw_cond)
+    swg_conds = [swg_ne_cond, swg_sw_cond]
+    swg_slots = [
+        {"side": "N/E", "type": norm(rec.get("swg_ne_type")), "width": num(rec.get("swg_ne_width")) or None,
+         "cond": swg_ne_cond, "notes": norm(rec.get("swg_ne_notes")), "cost": swg_cost_fn(swg_ne_cond)},
+        {"side": "S/W", "type": None, "width": num(rec.get("swg_sw_width")) or None,
+         "cond": swg_sw_cond, "notes": norm(rec.get("swg_sw_notes")), "cost": swg_cost_fn(swg_sw_cond)},
+    ]
+
     jal_existing = norm_yesno(rec.get("jal_existing"))
     jal_cond = norm(rec.get("jal_cond"))
+    jal_cost, jal_action = 0, "No action"
+    if jal_existing == "No":
+        jal_action = "New installation"
+        jal_cost = RATES["jal_new"]
+    elif jal_existing == "Yes":
+        if jal_cond == "Maintenance":
+            jal_action = "Maintenance"
+            jal_cost = RATES["jal_maintenance"]
+        elif jal_cond in REQUIRED_TIER:
+            jal_action = "Reactivation required"
+            jal_cost = RATES["jal_reactivation"]
+
+    sign = norm(rec.get("sign"))
+    signage_cost = RATES["signage"] if sign in ("No", "Damaged") else 0
+
     elec_cond = norm(rec.get("elec_cond"))
     elec_bucket = cond_bucket(elec_cond)
     has_light_data = elec_cond is not None or norm(rec.get("light_type")) is not None
 
-    att_conds = [norm(rec.get("att1_ne_cond")), norm(rec.get("att2_ne_cond")),
-                 norm(rec.get("att1_sw_cond")), norm(rec.get("att2_sw_cond"))]
-    swg_conds = [norm(rec.get("swg_ne_cond")), norm(rec.get("swg_sw_cond"))]
-
-    attach_slots = [
-        {"side": "N/E", "type": norm(rec.get("att1_ne_type")), "width": num(rec.get("att1_ne_width")) or None,
-         "cond": norm(rec.get("att1_ne_cond")), "notes": norm(rec.get("att1_ne_notes")), "cost": round(num(rec.get("att1_ne_cost")))},
-        {"side": "N/E", "type": norm(rec.get("att2_ne_type")), "width": num(rec.get("att2_ne_width")) or None,
-         "cond": norm(rec.get("att2_ne_cond")), "notes": norm(rec.get("att2_ne_notes")), "cost": round(num(rec.get("att2_ne_cost")))},
-        {"side": "S/W", "type": norm(rec.get("att1_sw_type")), "width": num(rec.get("att1_sw_width")) or None,
-         "cond": norm(rec.get("att1_sw_cond")), "notes": norm(rec.get("att1_sw_notes")), "cost": round(num(rec.get("att1_sw_cost")))},
-        {"side": "S/W", "type": norm(rec.get("att2_sw_type")), "width": num(rec.get("att2_sw_width")) or None,
-         "cond": norm(rec.get("att2_sw_cond")), "notes": norm(rec.get("att2_sw_notes")), "cost": round(num(rec.get("att2_sw_cost")))},
-    ]
-    swg_slots = [
-        {"side": "N/E", "type": norm(rec.get("swg_ne_type")), "width": num(rec.get("swg_ne_width")) or None,
-         "cond": norm(rec.get("swg_ne_cond")), "notes": norm(rec.get("swg_ne_notes")), "cost": round(num(rec.get("swg_ne_cost")))},
-        {"side": "S/W", "type": None, "width": num(rec.get("swg_sw_width")) or None,
-         "cond": norm(rec.get("swg_sw_cond")), "notes": norm(rec.get("swg_sw_notes")), "cost": round(num(rec.get("swg_sw_cost")))},
-    ]
+    cost = {"road": road_cost, "ugd": ugd_cost, "attach": attach_cost,
+            "swg": swg_cost, "jal": jal_cost, "signage": signage_cost}
+    total = sum(cost.values())
 
     area = norm(rec.get("area")) or ""
     main = norm(rec.get("main")) or ""
     cross = norm(rec.get("cross")) or ""
     map_link = norm(rec.get("map")) or ""
 
-    cost = {
-        "road": round(num(rec.get("road_cost"))),
-        "ugd": round(num(rec.get("ugd_cost"))),
-        "attach": round(num(rec.get("attach_cost"))),
-        "swg": round(num(rec.get("swg_cost"))),
-        "jal": round(num(rec.get("jal_cost"))),
-        "signage": round(num(rec.get("signage_cost"))),
-    }
-    total = round(num(rec.get("total_cost")))
-
-    road_action = norm(rec.get("road_action")) or ("Convert to concrete" if material in ("Mud", "Gravel") else "No action")
     items = category_items_for(
         ward, area, main, cross, map_link,
-        road_cond=road_cond, road_action=road_action, road_cost=cost["road"],
-        ugd_existing=ugd_existing, ugd_cond=ugd_cond, ugd_action=norm(rec.get("ugd_action")) or "No action", ugd_cost=cost["ugd"],
-        att_conds=att_conds, attach_cost=cost["attach"],
-        swg_conds=swg_conds, swg_cost=cost["swg"],
-        jal_existing=jal_existing, jal_cond=jal_cond, jal_action=norm(rec.get("jal_action")) or "No action", jal_cost=cost["jal"],
+        road_cond=road_cond, road_action=road_action, road_cost=road_cost,
+        ugd_existing=ugd_existing, ugd_cond=ugd_cond, ugd_action=ugd_action, ugd_cost=ugd_cost,
+        att_conds=att_conds, attach_cost=attach_cost,
+        swg_conds=swg_conds, swg_cost=swg_cost,
+        jal_existing=jal_existing, jal_cond=jal_cond, jal_action=jal_action, jal_cost=jal_cost,
         elec_cond=elec_cond, has_light_data=has_light_data,
     )
 
     detail = make_detail(
-        use=norm(rec.get("use")), sign=norm(rec.get("sign")),
-        road_action=road_action, road_cost=cost["road"],
+        use=norm(rec.get("use")), sign=sign,
+        road_action=road_action, road_cost=road_cost,
         ugd_existing=ugd_existing, ugd_type=norm(rec.get("ugd_type")), ugd_dia=num(rec.get("ugd_dia")) or None,
-        ugd_cond=ugd_cond, ugd_action=norm(rec.get("ugd_action")) or "No action", ugd_cost=cost["ugd"],
+        ugd_cond=ugd_cond, ugd_action=ugd_action, ugd_cost=ugd_cost,
         attach_slots=attach_slots, swg_slots=swg_slots,
         jal_existing=jal_existing, jal_cond=jal_cond, jal_notes=norm(rec.get("jal_notes")),
-        jal_action=norm(rec.get("jal_action")) or "No action", jal_cost=cost["jal"],
+        jal_action=jal_action, jal_cost=jal_cost,
         light_type=norm(rec.get("light_type")), elec_cond=elec_cond, elec_notes=norm(rec.get("elec_notes")),
     )
 
