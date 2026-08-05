@@ -297,7 +297,7 @@ export function SectionHead({
       transition={{ duration: 0.55 }}
       className="max-w-2xl"
     >
-      <div className="font-mono text-[11px] uppercase tracking-[0.2em] text-accent">{eyebrow}</div>
+      <div className="font-mono text-[11px] font-bold uppercase tracking-[0.2em] text-accent">{eyebrow}</div>
       <h2 className="mt-3 text-3xl font-bold sm:text-4xl">{title}</h2>
       {sub && <p className="mt-3 text-base leading-relaxed text-muted-foreground">{sub}</p>}
     </motion.div>

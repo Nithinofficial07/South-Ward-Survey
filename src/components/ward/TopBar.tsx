@@ -27,7 +27,7 @@ export function TopBar() {
             className="flex min-w-0 items-center gap-2 truncate rounded-full border border-[oklch(1_0_0/0.2)] bg-[oklch(0.2_0.04_210/0.75)] py-1.5 pl-2 pr-4 font-display text-sm font-bold text-[oklch(0.97_0.02_180)] backdrop-blur-md"
           >
             <img src="/assets/app-logo.webp" alt="" className="h-7 w-auto shrink-0" />
-            <span className="truncate">DVG SOUTH · WARD DATA</span>
+            <span className="truncate">Ward Development Matrix</span>
           </Link>
           <nav className="hidden gap-1 rounded-full border border-[oklch(1_0_0/0.2)] bg-[oklch(0.2_0.04_210/0.55)] px-2 py-1.5 backdrop-blur-md sm:flex">
             {LINKS.map((l) => {

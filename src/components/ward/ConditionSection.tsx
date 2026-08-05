@@ -1,8 +1,26 @@
 import { useMemo, useState } from "react";
-import { motion } from "motion/react";
+import { AnimatePresence, motion } from "motion/react";
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { SectionHead } from "./CategoryBreakdown";
-import { CONDITION_COLORS, totals, wards } from "@/lib/ward-data";
+import {
+  COST_COLORS,
+  CONDITION_COLORS,
+  PRIORITY_CATS,
+  PRIORITY_LABELS,
+  inr,
+  totals,
+  wards,
+  workItems,
+} from "@/lib/ward-data";
+
+const CAT_COLORS: Record<(typeof PRIORITY_CATS)[number], string> = {
+  road: COST_COLORS.road,
+  ugd: COST_COLORS.ugd,
+  attach: COST_COLORS.attach,
+  swg: COST_COLORS.swg,
+  jal: COST_COLORS.jal,
+  elec: "var(--coral)",
+};
 
 const NOTES: Record<string, string> = {
   Good: "Serviceable — no immediate works costed.",
@@ -24,6 +42,19 @@ export function ConditionSection() {
           value: w.cond[selected],
         }))
         .sort((a, b) => b.value - a.value),
+    [selected],
+  );
+
+  const categoryData = useMemo(
+    () =>
+      PRIORITY_CATS.map((cat) => {
+        const matches = workItems.filter((i) => i.cond === selected && i.cat === cat);
+        return {
+          cat,
+          count: matches.length,
+          cost: matches.reduce((s, i) => s + i.cost, 0),
+        };
+      }),
     [selected],
   );
 
@@ -125,6 +156,47 @@ export function ConditionSection() {
               </BarChart>
             </ResponsiveContainer>
           </div>
+        </div>
+
+        <div className="mt-8 rounded-3xl border bg-card p-5 shadow-card">
+          <div className="mb-4">
+            <div className="font-mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
+              Category-wise breakdown
+            </div>
+            <h3 className="mt-1 font-display text-2xl font-bold">{selected} by work category</h3>
+          </div>
+
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={selected}
+              className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3"
+            >
+              {categoryData.map((c, i) => (
+                <motion.div
+                  key={c.cat}
+                  initial={{ opacity: 0, y: 16, scale: 0.96 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  transition={{ duration: 0.4, delay: i * 0.07, ease: [0.22, 1, 0.36, 1] }}
+                  className="relative overflow-hidden rounded-2xl border bg-surface p-5"
+                  style={{ borderTop: `3px solid ${CAT_COLORS[c.cat]}` }}
+                >
+                  <div
+                    className="absolute -right-6 -top-6 h-20 w-20 rounded-full opacity-15 blur-xl"
+                    style={{ background: CAT_COLORS[c.cat] }}
+                  />
+                  <div className="font-mono text-[10px] uppercase tracking-[0.16em] text-muted-foreground">
+                    {PRIORITY_LABELS[c.cat]}
+                  </div>
+                  <div className="mt-2 text-3xl font-bold" style={{ color: CAT_COLORS[c.cat] }}>
+                    {c.count}
+                  </div>
+                  <div className="mt-1 font-mono text-[11px] text-muted-foreground">
+                    segment{c.count === 1 ? "" : "s"} · {c.cat === "elec" ? "rate TBD" : inr(c.cost)}
+                  </div>
+                </motion.div>
+              ))}
+            </motion.div>
+          </AnimatePresence>
         </div>
       </div>
     </section>

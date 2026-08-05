@@ -8,7 +8,7 @@ export function TopWardsMarquee() {
   return (
     <section className="bg-hero relative overflow-hidden py-14">
       <div className="grid-bg absolute inset-0 opacity-50" />
-      <div className="relative mb-6 px-6 text-center font-mono text-[11px] uppercase tracking-[0.24em] text-[oklch(0.9_0.04_170)]">
+      <div className="relative mb-6 px-6 text-center font-mono text-[11px] font-bold uppercase tracking-[0.24em] text-[oklch(0.9_0.04_170)]">
         Overview
       </div>
       <div className="relative flex w-max animate-marquee gap-4">
