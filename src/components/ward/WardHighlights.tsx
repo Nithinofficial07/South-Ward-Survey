@@ -18,7 +18,7 @@ export function WardHighlights() {
         <div className="flex flex-wrap items-end justify-between gap-6">
           <SectionHead
             eyebrow="Wards Highlights"
-            title="Where the biggest works are happening"
+            title="Top Works Required"
             sub="The four highest-investment wards in the register, at a glance."
           />
           <Link

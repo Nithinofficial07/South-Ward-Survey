@@ -9,7 +9,7 @@ export function TopWardsMarquee() {
     <section className="bg-hero relative overflow-hidden py-14">
       <div className="grid-bg absolute inset-0 opacity-50" />
       <div className="relative mb-6 px-6 text-center font-mono text-[11px] uppercase tracking-[0.24em] text-[oklch(0.9_0.04_170)]">
-        Ranked by estimated investment
+        Overview
       </div>
       <div className="relative flex w-max animate-marquee gap-4">
         {items.map((w, i) => (

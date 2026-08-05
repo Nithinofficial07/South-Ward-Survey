@@ -41,7 +41,7 @@ export function CategoryBreakdown() {
     <section id="investment" className="relative mx-auto max-w-6xl px-6 py-24">
       <SectionHead
         eyebrow="01 — Where the money goes"
-        title="Summary of estimation"
+        title="Summary of Estimation"
       />
 
       <div className="mt-12 grid gap-10 lg:grid-cols-[1.1fr_0.9fr]">
