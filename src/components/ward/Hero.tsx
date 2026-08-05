@@ -24,38 +24,56 @@ export function Hero() {
         style={{ y, opacity: fade }}
         className="relative mx-auto max-w-6xl px-6 pb-28 pt-24 sm:pt-32"
       >
-        <motion.div
-          initial={{ opacity: 0, y: 18 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6 }}
-          className="inline-flex items-center gap-2 rounded-full border border-[oklch(1_0_0/0.25)] bg-[oklch(1_0_0/0.12)] px-4 py-1.5 font-mono text-[11px] uppercase tracking-[0.18em] text-[oklch(0.96_0.02_120)] backdrop-blur"
-        >
-          <MapPinned className="h-3.5 w-3.5" />
-          Davanagere South Constituency
-        </motion.div>
+        <div className="flex flex-col items-start justify-between gap-10 lg:flex-row lg:items-end">
+          <div className="min-w-0">
+            <motion.div
+              initial={{ opacity: 0, y: 18 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6 }}
+              className="inline-flex items-center gap-2 rounded-full border border-[oklch(1_0_0/0.25)] bg-[oklch(1_0_0/0.12)] px-4 py-1.5 font-mono text-[11px] uppercase tracking-[0.18em] text-[oklch(0.96_0.02_120)] backdrop-blur"
+            >
+              <MapPinned className="h-3.5 w-3.5" />
+              Davanagere South Constituency
+            </motion.div>
 
-        <motion.h1
-          initial={{ opacity: 0, y: 26 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.7, delay: 0.08 }}
-          className="mt-6 max-w-4xl text-4xl font-bold leading-[1.05] text-[oklch(1_0_0)] sm:text-6xl lg:text-7xl"
-        >
-          Ward Infrastructure
-          <span className="block bg-gradient-to-r from-[var(--lime)] via-[var(--amber)] to-[var(--coral)] bg-clip-text text-transparent">
-            Register & Investment Map
-          </span>
-        </motion.h1>
+            <motion.h1
+              initial={{ opacity: 0, y: 26 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.7, delay: 0.08 }}
+              className="mt-6 max-w-4xl text-4xl font-bold leading-[1.05] text-[oklch(1_0_0)] sm:text-6xl lg:text-7xl"
+            >
+              Ward Infrastructure
+              <span className="block bg-gradient-to-r from-[var(--lime)] via-[var(--amber)] to-[var(--coral)] bg-clip-text text-transparent">
+                Register & Investment Map
+              </span>
+            </motion.h1>
 
-        <motion.p
-          initial={{ opacity: 0, y: 24 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.7, delay: 0.16 }}
-          className="mt-6 max-w-2xl text-base leading-relaxed text-[oklch(0.92_0.03_180)] sm:text-lg"
-        >
-          A street-by-street field survey of {totals.segments.toLocaleString("en-IN")} road segments
-          across {totals.wards} wards — roads, drains, footpaths, gutters, water lines and signage,
-          costed against the PWD Schedule of Rates 2023-24.
-        </motion.p>
+            <motion.p
+              initial={{ opacity: 0, y: 24 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.7, delay: 0.16 }}
+              className="mt-6 max-w-2xl text-base leading-relaxed text-[oklch(0.92_0.03_180)] sm:text-lg"
+            >
+              A street-by-street field survey of {totals.segments.toLocaleString("en-IN")} road segments
+              across {totals.wards} wards — roads, drains, footpaths, gutters, water lines and signage,
+              costed against the PWD Schedule of Rates 2023-24.
+            </motion.p>
+          </div>
+
+          <motion.div
+            initial={{ opacity: 0, x: 24 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.7, delay: 0.2 }}
+            className="relative shrink-0 self-center lg:self-end"
+          >
+            <div className="absolute inset-0 -z-10 rounded-full bg-[var(--lime)] opacity-25 blur-3xl" />
+            <img
+              src="/assets/ward-lead.png"
+              alt=""
+              className="h-48 w-auto object-contain drop-shadow-2xl sm:h-56"
+            />
+          </motion.div>
+        </div>
 
         <motion.div
           initial={{ opacity: 0, y: 24 }}
