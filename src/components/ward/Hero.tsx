@@ -1,13 +1,16 @@
 import { motion, useScroll, useTransform } from "motion/react";
-import { useRef } from "react";
+import { useRef, useState } from "react";
 import { ArrowDown, MapPinned } from "lucide-react";
 import { Link } from "@tanstack/react-router";
 import { CountUp } from "./CountUp";
-import { inr, km, totals } from "@/lib/ward-data";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { COST_COLORS, COST_LABELS, inr, km, totals, wards, type CostKey } from "@/lib/ward-data";
 
 function ha(n: number) {
   return `${(n / 10000).toFixed(1)} ha`;
 }
+
+const BREAKDOWN_ORDER: CostKey[] = ["road", "ugd", "swg", "attach", "jal"];
 
 const MotionLink = motion.create(Link);
 
@@ -16,6 +19,8 @@ export function Hero() {
   const { scrollYProgress } = useScroll({ target: ref, offset: ["start start", "end start"] });
   const y = useTransform(scrollYProgress, [0, 1], [0, 140]);
   const fade = useTransform(scrollYProgress, [0, 0.8], [1, 0]);
+  const [showBreakdown, setShowBreakdown] = useState(false);
+  const elecSegments = wards.reduce((s, w) => s + w.elecSegments, 0);
 
   return (
     <section ref={ref} className="bg-hero relative overflow-hidden">
@@ -109,19 +114,27 @@ export function Hero() {
           className="mt-12 grid gap-4 sm:grid-cols-2 lg:grid-cols-4"
         >
           {[
-            { label: "Total Roads", value: totals.segments },
-            { label: "Total Area", value: totals.areaSqm, fmt: ha },
-            { label: "Total Area", value: totals.length, fmt: km },
-            { label: "Total Investment", value: totals.cost, fmt: inr },
+            { label: "Total Roads", value: totals.segments, onClick: undefined },
+            { label: "Total Area", value: totals.areaSqm, fmt: ha, onClick: undefined },
+            { label: "Total Area", value: totals.length, fmt: km, onClick: undefined },
+            { label: "Total Investment", value: totals.cost, fmt: inr, onClick: () => setShowBreakdown(true) },
           ].map((s, i) => (
             <motion.div
               key={i}
               whileHover={{ y: -6 }}
-              className="rounded-2xl border border-[oklch(1_0_0/0.18)] bg-[oklch(1_0_0/0.1)] p-5 backdrop-blur-md"
+              onClick={s.onClick}
+              className={`rounded-2xl border border-[oklch(1_0_0/0.18)] bg-[oklch(1_0_0/0.1)] p-5 backdrop-blur-md ${s.onClick ? "cursor-pointer transition hover:bg-[oklch(1_0_0/0.16)]" : ""}`}
               style={{ borderTopColor: ["var(--lime)", "var(--amber)", "var(--sky)", "var(--coral)"][i], borderTopWidth: 3 }}
             >
-              <div className="font-mono text-[10px] uppercase tracking-[0.16em] text-[oklch(0.88_0.04_170)]">
-                {s.label}
+              <div className="flex items-center justify-between gap-2">
+                <div className="font-mono text-[10px] uppercase tracking-[0.16em] text-[oklch(0.88_0.04_170)]">
+                  {s.label}
+                </div>
+                {s.onClick && (
+                  <span className="font-mono text-[9px] uppercase tracking-wider text-[oklch(0.88_0.04_170)] opacity-70">
+                    View breakdown →
+                  </span>
+                )}
               </div>
               <div className="mt-2 text-3xl font-bold text-[oklch(1_0_0)]">
                 <CountUp to={s.value} format={s.fmt} />
@@ -147,6 +160,43 @@ export function Hero() {
           Explore every ward
         </MotionLink>
       </motion.div>
+
+      <Dialog open={showBreakdown} onOpenChange={setShowBreakdown}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Total Investment Breakdown</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            {BREAKDOWN_ORDER.map((k) => {
+              const value = wards.reduce((s, w) => s + w.cost[k], 0);
+              return (
+                <div key={k} className="flex items-center justify-between gap-3 rounded-xl bg-surface px-4 py-3">
+                  <span className="inline-flex items-center gap-2 text-sm font-medium">
+                    <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ background: COST_COLORS[k] }} />
+                    {COST_LABELS[k]}
+                  </span>
+                  <span className="font-mono text-sm font-bold" style={{ color: COST_COLORS[k] }}>
+                    {inr(value)}
+                  </span>
+                </div>
+              );
+            })}
+            <div className="flex items-center justify-between gap-3 rounded-xl bg-surface px-4 py-3">
+              <span className="inline-flex items-center gap-2 text-sm font-medium">
+                <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ background: "var(--coral)" }} />
+                Electrical
+              </span>
+              <span className="font-mono text-sm font-bold text-muted-foreground">
+                TBD · {elecSegments.toLocaleString("en-IN")} segments
+              </span>
+            </div>
+          </div>
+          <div className="mt-2 flex items-center justify-between border-t pt-4">
+            <span className="font-display text-base font-bold">Total</span>
+            <span className="font-display text-xl font-bold text-gradient">{inr(totals.cost)}</span>
+          </div>
+        </DialogContent>
+      </Dialog>
     </section>
   );
 }
