@@ -5,12 +5,14 @@ import { SectionHead } from "./CategoryBreakdown";
 import {
   COST_COLORS,
   CONDITION_COLORS,
+  CONDITION_KEYS,
   PRIORITY_CATS,
   PRIORITY_LABELS,
   inr,
   totals,
   wards,
   workItems,
+  type ConditionKey,
 } from "@/lib/ward-data";
 
 const CAT_COLORS: Record<(typeof PRIORITY_CATS)[number], string> = {
@@ -30,16 +32,24 @@ const NOTES: Record<string, string> = {
 };
 
 export function ConditionSection() {
-  const entries = Object.entries(totals.condition) as [keyof typeof totals.condition, number][];
-  const sum = entries.reduce((s, [, v]) => s + v, 0);
-  const [selected, setSelected] = useState<keyof typeof totals.condition>("Required");
+  const [selected, setSelected] = useState<ConditionKey>("Required");
+
+  // Totals across every category (Road, UGD, SWG, Attachment, Jalasiri, Electrical)
+  // combined, not just the road's own condition field.
+  const conditionTotals = useMemo(() => {
+    const acc: Record<ConditionKey, number> = { Good: 0, Maintenance: 0, Required: 0, Unknown: 0 };
+    for (const item of workItems) acc[item.cond] += 1;
+    return acc;
+  }, []);
+  const entries = CONDITION_KEYS.map((k) => [k, conditionTotals[k]] as const);
+  const sum = workItems.length;
 
   const wardData = useMemo(
     () =>
       wards
         .map((w) => ({
           ward: `Ward ${String(w.ward).padStart(2, "0")}`,
-          value: w.cond[selected],
+          value: workItems.filter((i) => i.ward === w.ward && i.cond === selected).length,
         }))
         .sort((a, b) => b.value - a.value),
     [selected],
@@ -65,7 +75,7 @@ export function ConditionSection() {
         <SectionHead
           eyebrow="03 — Ground condition"
           title="Summary of conditions"
-          sub={`Every one of the ${sum.toLocaleString("en-IN")} segments was graded on the spot.`}
+          sub={`${sum.toLocaleString("en-IN")} category checks (Road, UGD, SWG, Attachment, Jalasiri, Electrical) across ${totals.segments.toLocaleString("en-IN")} segments were graded on the spot.`}
         />
 
         <div className="mt-12 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
@@ -97,7 +107,7 @@ export function ConditionSection() {
                 </div>
                 <div className="mt-1 font-display text-lg font-semibold">{k}</div>
                 <div className="mt-1 font-mono text-[11px] text-muted-foreground">
-                  {((v / sum) * 100).toFixed(1)}% of all segments
+                  {((v / sum) * 100).toFixed(1)}% of all category checks
                 </div>
                 <p className="mt-4 text-sm leading-relaxed text-muted-foreground">{NOTES[k]}</p>
               </motion.button>
@@ -133,7 +143,7 @@ export function ConditionSection() {
                 color: CONDITION_COLORS[selected],
               }}
             >
-              {wardData.reduce((total, item) => total + item.value, 0)} segments
+              {wardData.reduce((total, item) => total + item.value, 0)} checks
             </div>
           </div>
 
@@ -144,7 +154,7 @@ export function ConditionSection() {
                 <XAxis dataKey="ward" angle={-20} textAnchor="end" interval={0} height={52} tick={{ fontSize: 11 }} />
                 <YAxis allowDecimals={false} tick={{ fontSize: 11 }} />
                 <Tooltip
-                  formatter={(value: number) => [`${value} segments`, selected]}
+                  formatter={(value: number) => [`${value} checks`, selected]}
                   labelStyle={{ color: "var(--foreground)" }}
                   contentStyle={{
                     background: "var(--card)",
