@@ -22,6 +22,9 @@ import {
   type Road,
 } from "@/lib/ward-data";
 
+const th = "px-3 py-2 text-left font-mono text-[10px] uppercase tracking-wider text-muted-foreground whitespace-nowrap";
+const td = "px-3 py-2.5 align-top text-xs";
+
 export function PriorityWorks() {
   const [open, setOpen] = useState(false);
   const [selectedWard, setSelectedWard] = useState<number | null>(null);
@@ -214,47 +217,92 @@ export function PriorityWorks() {
                       })}
                     </div>
 
-                    <div className="mt-4 space-y-2">
-                      {filteredItems.map((item, idx) => (
-                        <button
-                          key={idx}
-                          onClick={() => setSelectedRoad(findRoad(item.ward, item.no) ?? null)}
-                          className="grid w-full cursor-pointer grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3 rounded-xl border bg-surface p-3 text-left transition hover:-translate-y-0.5 hover:border-accent"
-                        >
-                          <span
-                            className="rounded-full px-2.5 py-1 font-mono text-[10px] uppercase tracking-wider"
-                            style={{
-                              background: `color-mix(in oklab, ${CONDITION_COLORS[item.cond]} 16%, transparent)`,
-                              color: CONDITION_COLORS[item.cond],
-                            }}
-                          >
-                            {item.cond}
-                          </span>
-                          <div className="min-w-0">
-                            <div className="truncate text-sm font-medium">
-                              <span style={{ color: catColor[item.cat] }}>{PRIORITY_LABELS[item.cat]}</span>
-                              {" — "}
-                              {item.main}
-                              {item.cross && <span className="text-muted-foreground"> · {item.cross}</span>}
-                            </div>
-                            <div className="truncate font-mono text-[10.5px] text-muted-foreground">
-                              {item.area} — {item.action}
-                            </div>
-                          </div>
-                          <div className="text-right">
-                            <div className="font-mono text-sm font-bold">
-                              {item.cost > 0 ? inr(item.cost) : "TBD"}
-                            </div>
-                            {item.map && (
-                              <span className="mt-0.5 inline-flex items-center gap-1 font-mono text-[10px] text-muted-foreground">
-                                Details <ExternalLink className="h-3 w-3" />
-                              </span>
-                            )}
-                          </div>
-                        </button>
-                      ))}
+                    <div className="mt-4 overflow-x-auto rounded-xl border">
+                      <table className="w-full min-w-[760px] border-collapse">
+                        <thead>
+                          <tr className="border-b bg-card">
+                            <th className={th}>#</th>
+                            <th className={th}>Category</th>
+                            <th className={th}>Road</th>
+                            <th className={th}>Use / Sign</th>
+                            <th className={th}>Dist / Width</th>
+                            <th className={th}>Material / Condition</th>
+                            <th className={th}>Action</th>
+                            <th className={th}>Estimation</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {filteredItems.map((item, idx) => {
+                            const r = findRoad(item.ward, item.no);
+                            return (
+                              <tr
+                                key={idx}
+                                onClick={() => setSelectedRoad(r ?? null)}
+                                className="cursor-pointer border-b bg-card last:border-0 hover:bg-surface"
+                              >
+                                <td className={td}>{item.no}</td>
+                                <td className={td}>
+                                  <span
+                                    className="whitespace-nowrap rounded-full px-2 py-0.5 font-mono text-[10px] uppercase tracking-wider"
+                                    style={{
+                                      background: `color-mix(in oklab, ${catColor[item.cat]} 16%, transparent)`,
+                                      color: catColor[item.cat],
+                                    }}
+                                  >
+                                    {PRIORITY_LABELS[item.cat]}
+                                  </span>
+                                </td>
+                                <td className={td}>
+                                  <div className="font-medium">
+                                    {item.main}
+                                    {item.cross && <span className="text-muted-foreground"> · {item.cross}</span>}
+                                  </div>
+                                  <div className="text-muted-foreground">{item.area}</div>
+                                </td>
+                                <td className={`${td} whitespace-nowrap`}>
+                                  {r?.detail.use ?? "—"}
+                                  <div className="text-muted-foreground">Sign: {r?.detail.sign ?? "—"}</div>
+                                </td>
+                                <td className={`${td} whitespace-nowrap`}>
+                                  {r ? (
+                                    <>
+                                      <div>{r.d} m</div>
+                                      <div className="text-muted-foreground">w {r.wd} m</div>
+                                    </>
+                                  ) : (
+                                    "—"
+                                  )}
+                                </td>
+                                <td className={td}>
+                                  {r?.mat || "—"}
+                                  <div className="mt-1">
+                                    <span
+                                      className="whitespace-nowrap rounded-full px-2 py-0.5 font-mono text-[10px] uppercase tracking-wider"
+                                      style={{
+                                        background: `color-mix(in oklab, ${CONDITION_COLORS[item.cond]} 15%, transparent)`,
+                                        color: CONDITION_COLORS[item.cond],
+                                      }}
+                                    >
+                                      {item.cond}
+                                    </span>
+                                  </div>
+                                </td>
+                                <td className={td}>{item.action}</td>
+                                <td className={`${td} whitespace-nowrap`}>
+                                  <div className="font-mono font-bold">{item.cost > 0 ? inr(item.cost) : "TBD"}</div>
+                                  {item.map && (
+                                    <span className="mt-0.5 inline-flex items-center gap-1 font-mono text-[10px] text-muted-foreground">
+                                      Map <ExternalLink className="h-3 w-3" />
+                                    </span>
+                                  )}
+                                </td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
                       {filteredItems.length === 0 && (
-                        <div className="rounded-xl border border-dashed p-6 text-center text-xs text-muted-foreground">
+                        <div className="p-6 text-center text-xs text-muted-foreground">
                           No items match this filter for this ward.
                         </div>
                       )}

@@ -4,11 +4,16 @@ import { ArrowDown, MapPinned } from "lucide-react";
 import { Link } from "@tanstack/react-router";
 import { CountUp } from "./CountUp";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { COST_COLORS, COST_LABELS, inr, km, totals, wards, type CostKey } from "@/lib/ward-data";
-
-function ha(n: number) {
-  return `${(n / 10000).toFixed(1)} ha`;
-}
+import {
+  COST_COLORS,
+  COST_LABELS,
+  acres,
+  inr,
+  totalLocalities,
+  totals,
+  wards,
+  type CostKey,
+} from "@/lib/ward-data";
 
 const BREAKDOWN_ORDER: CostKey[] = ["road", "ugd", "swg", "attach", "jal"];
 
@@ -82,7 +87,7 @@ export function Hero() {
               alt="Sri Samarth Shamanur Mallikarjun"
               animate={{ y: [0, -14, 0] }}
               transition={{ repeat: Infinity, duration: 5, ease: "easeInOut" }}
-              className="h-72 w-auto object-contain drop-shadow-2xl sm:h-[26rem]"
+              className="h-80 w-auto object-contain drop-shadow-2xl sm:h-[30rem]"
             />
 
             <motion.div
@@ -111,36 +116,47 @@ export function Hero() {
           initial={{ opacity: 0, y: 24 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.7, delay: 0.24 }}
-          className="mt-12 grid gap-4 sm:grid-cols-2 lg:grid-cols-4"
+          className="mt-12 grid gap-4 sm:grid-cols-2 lg:grid-cols-5"
         >
-          {[
-            { label: "Total Roads", value: totals.segments, onClick: undefined },
-            { label: "Total Area", value: totals.areaSqm, fmt: ha, onClick: undefined },
-            { label: "Total Area", value: totals.length, fmt: km, onClick: undefined },
-            { label: "Total Investment", value: totals.cost, fmt: inr, onClick: () => setShowBreakdown(true) },
-          ].map((s, i) => (
-            <motion.div
-              key={i}
-              whileHover={{ y: -6 }}
-              onClick={s.onClick}
-              className={`rounded-2xl border border-[oklch(1_0_0/0.18)] bg-[oklch(1_0_0/0.1)] p-5 backdrop-blur-md ${s.onClick ? "cursor-pointer transition hover:bg-[oklch(1_0_0/0.16)]" : ""}`}
-              style={{ borderTopColor: ["var(--lime)", "var(--amber)", "var(--sky)", "var(--coral)"][i], borderTopWidth: 3 }}
-            >
-              <div className="flex items-center justify-between gap-2">
+          {(
+            [
+              { label: "Total Roads", value: totals.segments },
+              { label: "Total Area", value: totals.areaSqm, fmt: acres },
+              { label: "Wards", value: totals.wards, to: "/wards" },
+              { label: "Total Investment", value: totals.cost, fmt: inr, onClick: () => setShowBreakdown(true) },
+              { label: "Villages", value: totalLocalities, to: "/wards" },
+            ] as const
+          ).map((s, i) => {
+            const borderTopColor = ["var(--lime)", "var(--amber)", "var(--sky)", "var(--coral)", "var(--violet)"][i];
+            const clickable = "to" in s || "onClick" in s;
+            const cardProps = {
+              whileHover: { y: -6 },
+              className: `rounded-2xl border border-[oklch(1_0_0/0.18)] bg-[oklch(1_0_0/0.1)] p-5 backdrop-blur-md ${clickable ? "cursor-pointer transition hover:bg-[oklch(1_0_0/0.16)]" : ""}`,
+              style: { borderTopColor, borderTopWidth: 3 },
+            };
+            const content = (
+              <>
                 <div className="font-mono text-[10px] uppercase tracking-[0.16em] text-[oklch(0.88_0.04_170)]">
                   {s.label}
                 </div>
-                {s.onClick && (
-                  <span className="font-mono text-[9px] uppercase tracking-wider text-[oklch(0.88_0.04_170)] opacity-70">
-                    View breakdown →
-                  </span>
-                )}
-              </div>
-              <div className="mt-2 text-3xl font-bold text-[oklch(1_0_0)]">
-                <CountUp to={s.value} format={s.fmt} />
-              </div>
-            </motion.div>
-          ))}
+                <div className="mt-2 text-3xl font-bold text-[oklch(1_0_0)]">
+                  <CountUp to={s.value} format={"fmt" in s ? s.fmt : undefined} />
+                </div>
+              </>
+            );
+            if ("to" in s) {
+              return (
+                <MotionLink key={s.label + i} to={s.to} {...cardProps}>
+                  {content}
+                </MotionLink>
+              );
+            }
+            return (
+              <motion.div key={s.label + i} onClick={"onClick" in s ? s.onClick : undefined} {...cardProps}>
+                {content}
+              </motion.div>
+            );
+          })}
         </motion.div>
 
         <MotionLink

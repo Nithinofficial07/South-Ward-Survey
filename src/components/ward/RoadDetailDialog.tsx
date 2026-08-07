@@ -6,7 +6,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { CONDITION_COLORS, inr, wardName, type Road } from "@/lib/ward-data";
+import { CONDITION_COLORS, UNIT_RATES, inr, wardName, type Road } from "@/lib/ward-data";
 
 function CondBadge({ cond }: { cond: string | null | undefined }) {
   const c = cond && CONDITION_COLORS[cond] ? cond : "Unknown";
@@ -20,8 +20,14 @@ function CondBadge({ cond }: { cond: string | null | undefined }) {
   );
 }
 
-function Cost({ v }: { v: number }) {
-  return <span className="font-mono text-xs font-semibold">{v > 0 ? inr(v) : "TBD"}</span>;
+function Cost({ v, rateKey }: { v: number; rateKey?: string }) {
+  const rate = rateKey ? UNIT_RATES[rateKey] : undefined;
+  return (
+    <div>
+      <span className="font-mono text-xs font-semibold">{v > 0 ? inr(v) : "TBD"}</span>
+      {rate && <div className="font-mono text-[10px] text-muted-foreground">{rate}</div>}
+    </div>
+  );
 }
 
 function TableShell({ title, children }: { title: string; children: ReactNode }) {
@@ -73,6 +79,7 @@ export function RoadDetailDialog({ road, onClose }: { road: Road | null; onClose
                   <th className={th}>Dist / Width</th>
                   <th className={th}>Material / Condition</th>
                   <th className={th}>Action</th>
+                  <th className={th}>Funding Source</th>
                   <th className={th}>Estimation</th>
                 </tr>
               </thead>
@@ -89,7 +96,8 @@ export function RoadDetailDialog({ road, onClose }: { road: Road | null; onClose
                     <div className="text-muted-foreground">Sign: {road.detail.sign ?? "—"}</div>
                   </td>
                   <td className={td}>
-                    {road.d} m × {road.wd} m
+                    <div>{road.d} m</div>
+                    <div className="text-muted-foreground">w {road.wd} m</div>
                   </td>
                   <td className={td}>
                     {road.mat || "—"}
@@ -98,8 +106,9 @@ export function RoadDetailDialog({ road, onClose }: { road: Road | null; onClose
                     </div>
                   </td>
                   <td className={td}>{road.detail.road.action}</td>
+                  <td className={`${td} text-muted-foreground`}>Not recorded</td>
                   <td className={td}>
-                    <Cost v={road.detail.road.cost} />
+                    <Cost v={road.detail.road.cost} rateKey={`road:${road.detail.road.action}`} />
                   </td>
                 </tr>
               </tbody>
@@ -127,7 +136,7 @@ export function RoadDetailDialog({ road, onClose }: { road: Road | null; onClose
                     </td>
                     <td className={`${td} text-muted-foreground`}>{s.notes ?? "—"}</td>
                     <td className={td}>
-                      <Cost v={s.cost} />
+                      <Cost v={s.cost} rateKey={s.cond ? `attach:${s.cond}` : undefined} />
                     </td>
                   </tr>
                 ))}
@@ -156,7 +165,7 @@ export function RoadDetailDialog({ road, onClose }: { road: Road | null; onClose
                     </td>
                     <td className={`${td} text-muted-foreground`}>{s.notes ?? "—"}</td>
                     <td className={td}>
-                      <Cost v={s.cost} />
+                      <Cost v={s.cost} rateKey={s.cond ? `swg:${s.cond}` : undefined} />
                     </td>
                   </tr>
                 ))}
@@ -185,7 +194,7 @@ export function RoadDetailDialog({ road, onClose }: { road: Road | null; onClose
                   </td>
                   <td className={td}>{road.detail.ugd.action}</td>
                   <td className={td}>
-                    <Cost v={road.detail.ugd.cost} />
+                    <Cost v={road.detail.ugd.cost} rateKey={`ugd:${road.detail.ugd.action}`} />
                   </td>
                 </tr>
               </tbody>
@@ -210,7 +219,7 @@ export function RoadDetailDialog({ road, onClose }: { road: Road | null; onClose
                   <td className={`${td} text-muted-foreground`}>{road.detail.jal.notes ?? "—"}</td>
                   <td className={td}>{road.detail.jal.action}</td>
                   <td className={td}>
-                    <Cost v={road.detail.jal.cost} />
+                    <Cost v={road.detail.jal.cost} rateKey={`jal:${road.detail.jal.action}`} />
                   </td>
                 </tr>
               </tbody>

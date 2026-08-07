@@ -1,13 +1,14 @@
 import { motion, useScroll, useSpring } from "motion/react";
 import { Link } from "@tanstack/react-router";
-import { BarChart3, Building2, FileText, MapPinned, TrendingUp } from "lucide-react";
+import { BarChart3, Building2, FileText, MapPinned, Table2, TrendingUp } from "lucide-react";
 
 const LINKS = [
   { to: "/", label: "Home", icon: Building2 },
   { to: "/wards", label: "Wards", icon: MapPinned },
   { to: "/investment", label: "Estimates", icon: TrendingUp },
   { to: "/condition", label: "Status", icon: BarChart3 },
-  { to: "/roads", label: "Breakdown", icon: FileText },
+  { to: "/roads", label: "Works", icon: FileText },
+  { to: "/summary", label: "Summary", icon: Table2 },
 ] as const;
 
 export function TopBar() {

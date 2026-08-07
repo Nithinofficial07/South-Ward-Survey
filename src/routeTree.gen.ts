@@ -13,6 +13,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as ConditionRouteImport } from './routes/condition'
 import { Route as InvestmentRouteImport } from './routes/investment'
 import { Route as RoadsRouteImport } from './routes/roads'
+import { Route as SummaryRouteImport } from './routes/summary'
 import { Route as WardsRouteImport } from './routes/wards'
 
 const IndexRoute = IndexRouteImport.update({
@@ -35,6 +36,11 @@ const RoadsRoute = RoadsRouteImport.update({
   path: '/roads',
   getParentRoute: () => rootRouteImport,
 } as any)
+const SummaryRoute = SummaryRouteImport.update({
+  id: '/summary',
+  path: '/summary',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const WardsRoute = WardsRouteImport.update({
   id: '/wards',
   path: '/wards',
@@ -46,6 +52,7 @@ export interface FileRoutesByFullPath {
   '/condition': typeof ConditionRoute
   '/investment': typeof InvestmentRoute
   '/roads': typeof RoadsRoute
+  '/summary': typeof SummaryRoute
   '/wards': typeof WardsRoute
 }
 export interface FileRoutesByTo {
@@ -53,6 +60,7 @@ export interface FileRoutesByTo {
   '/condition': typeof ConditionRoute
   '/investment': typeof InvestmentRoute
   '/roads': typeof RoadsRoute
+  '/summary': typeof SummaryRoute
   '/wards': typeof WardsRoute
 }
 export interface FileRoutesById {
@@ -61,14 +69,23 @@ export interface FileRoutesById {
   '/condition': typeof ConditionRoute
   '/investment': typeof InvestmentRoute
   '/roads': typeof RoadsRoute
+  '/summary': typeof SummaryRoute
   '/wards': typeof WardsRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/condition' | '/investment' | '/roads' | '/wards'
+  fullPaths:
+    '/' | '/condition' | '/investment' | '/roads' | '/summary' | '/wards'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/condition' | '/investment' | '/roads' | '/wards'
-  id: '__root__' | '/' | '/condition' | '/investment' | '/roads' | '/wards'
+  to: '/' | '/condition' | '/investment' | '/roads' | '/summary' | '/wards'
+  id:
+    | '__root__'
+    | '/'
+    | '/condition'
+    | '/investment'
+    | '/roads'
+    | '/summary'
+    | '/wards'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -76,6 +93,7 @@ export interface RootRouteChildren {
   ConditionRoute: typeof ConditionRoute
   InvestmentRoute: typeof InvestmentRoute
   RoadsRoute: typeof RoadsRoute
+  SummaryRoute: typeof SummaryRoute
   WardsRoute: typeof WardsRoute
 }
 
@@ -109,6 +127,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof RoadsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/summary': {
+      id: '/summary'
+      path: '/summary'
+      fullPath: '/summary'
+      preLoaderRoute: typeof SummaryRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/wards': {
       id: '/wards'
       path: '/wards'
@@ -124,6 +149,7 @@ const rootRouteChildren: RootRouteChildren = {
   ConditionRoute: ConditionRoute,
   InvestmentRoute: InvestmentRoute,
   RoadsRoute: RoadsRoute,
+  SummaryRoute: SummaryRoute,
   WardsRoute: WardsRoute,
 }
 export const routeTree = rootRouteImport

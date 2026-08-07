@@ -17,7 +17,7 @@ export function WardHighlights() {
       <div className="relative mx-auto max-w-6xl px-6">
         <div className="flex flex-wrap items-end justify-between gap-6">
           <SectionHead
-            eyebrow="Wards Highlights"
+            eyebrow="Summary"
             title="Top Works Required"
             sub="The four highest-investment wards in the register, at a glance."
           />
@@ -30,7 +30,19 @@ export function WardHighlights() {
           </Link>
         </div>
 
-        <div className="mt-12 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="mt-8 flex flex-wrap items-center gap-x-5 gap-y-2">
+          <span className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
+            Condition bar:
+          </span>
+          {(["Good", "Maintenance", "Required", "Unknown"] as const).map((k) => (
+            <span key={k} className="inline-flex items-center gap-1.5 font-mono text-[11px] text-muted-foreground">
+              <span className="h-2 w-2 rounded-full" style={{ background: CONDITION_COLORS[k] }} />
+              {k}
+            </span>
+          ))}
+        </div>
+
+        <div className="mt-6 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
           {top.map((w, i) => {
             const accent = wardAccent(wards.indexOf(w));
             const condTotal = w.segments || 1;
@@ -77,7 +89,7 @@ export function WardHighlights() {
                 </div>
 
                 <div className="mt-4 flex items-center gap-1.5 font-mono text-[11px] text-muted-foreground">
-                  <Signpost className="h-3.5 w-3.5" /> {w.segments} segments · {km(w.length)}
+                  <Signpost className="h-3.5 w-3.5" /> {w.segments} roads · {km(w.length)}
                 </div>
 
                 <div className="mt-4 font-mono text-[10px] uppercase tracking-widest text-muted-foreground">

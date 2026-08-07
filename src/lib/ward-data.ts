@@ -195,6 +195,38 @@ export function km(m: number) {
   return `${(m / 1000).toFixed(1)} km`;
 }
 
+const SQM_PER_ACRE = 4046.86;
+
+export function acres(areaSqm: number) {
+  return `${(areaSqm / SQM_PER_ACRE).toFixed(2)} ac`;
+}
+
+/** Distinct localities recorded across the whole register (best available stand-in for "villages"). */
+export const totalLocalities = new Set(roads.map((r) => r.a).filter(Boolean)).size;
+
+/** Rates used for the "unit rate" sublabel on estimation figures — mirrors scripts/build-ward-data.py RATES. */
+export const UNIT_RATES: Record<string, string> = {
+  "road:Convert to concrete": "₹3,500/sqm",
+  "ugd:New installation": "₹5,000/m",
+  "ugd:Repair (Maintenance)": "₹1,067/m",
+  "ugd:Repair (Outdated)": "₹1,600/m",
+  "ugd:Repair (Required)": "₹2,667/m",
+  "ugd:Repair (Additional Required)": "₹4,000/m",
+  "attach:Maintenance": "₹1,150/sqm",
+  "attach:Outdated": "₹1,690/sqm",
+  "attach:Required": "₹2,876/sqm",
+  "attach:Additional Required": "₹4,313/sqm",
+  "swg:Maintenance": "₹400/m",
+  "swg:Outdated": "₹600/m",
+  "swg:Required": "₹1,000/m",
+  "swg:Additional Required": "₹1,500/m",
+  "jal:Maintenance": "₹5,000 flat",
+  "jal:Reactivation required": "₹10,000 flat",
+  "jal:New installation": "₹10,000 flat",
+  "signage:Installation required": "₹5,000 flat",
+  "signage:Replacement required": "₹5,000 flat",
+};
+
 export const WARD_ACCENTS = [
   "var(--teal)",
   "var(--amber)",
@@ -206,4 +238,9 @@ export const WARD_ACCENTS = [
 
 export function wardAccent(i: number) {
   return WARD_ACCENTS[i % WARD_ACCENTS.length];
+}
+
+/** Number of surveyed segments in a ward that actually need paid-for work. */
+export function wardWorksCount(ward: number) {
+  return roads.filter((r) => r.w === ward && r.cost > 0).length;
 }

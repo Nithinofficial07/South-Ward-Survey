@@ -6,9 +6,11 @@ import {
   CONDITION_COLORS,
   COST_COLORS,
   COST_LABELS,
+  acres,
   inr,
   km,
   wardAccent,
+  wardWorksCount,
   wards,
   type CostKey,
   type Ward,
@@ -95,6 +97,7 @@ function WardCard({
     .map((k) => ({ k, v: w.cost[k] }))
     .filter((c) => c.v > 0)
     .sort((a, b) => b.v - a.v);
+  const works = wardWorksCount(w.ward);
 
   return (
     <motion.article
@@ -136,7 +139,7 @@ function WardCard({
             <Ruler className="h-3.5 w-3.5" /> {km(w.length)}
           </span>
           <span className="inline-flex items-center gap-1.5">
-            <MapPinned className="h-3.5 w-3.5" /> {(w.areaSqm / 10000).toFixed(2)} ha
+            <MapPinned className="h-3.5 w-3.5" /> {acres(w.areaSqm)}
           </span>
         </div>
 
@@ -156,7 +159,7 @@ function WardCard({
         <div className="mt-5 flex items-end justify-between gap-3">
           <div>
             <div className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
-              Estimated works
+              Estimated works · {works} work{works === 1 ? "" : "s"}
             </div>
             <div className="font-display text-2xl font-bold">
               <CountUp to={w.total} format={inr} />
