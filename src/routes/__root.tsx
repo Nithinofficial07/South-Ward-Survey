@@ -3,6 +3,8 @@ import {
   Outlet,
   Link,
   createRootRouteWithContext,
+  redirect,
+  useLocation,
   useRouter,
   HeadContent,
   Scripts,
@@ -11,6 +13,7 @@ import { useEffect, type ReactNode } from "react";
 
 import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
+import { getAuthStatusFn } from "../lib/auth.server";
 import { TopBar } from "@/components/ward/TopBar";
 import { SiteFooter } from "@/components/ward/Footer";
 
@@ -75,6 +78,14 @@ function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
 }
 
 export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()({
+  beforeLoad: async ({ location }) => {
+    if (location.pathname === "/login") return;
+
+    const { isAuthenticated } = await getAuthStatusFn();
+    if (!isAuthenticated) {
+      throw redirect({ to: "/login", search: { redirect: location.href } });
+    }
+  },
   head: () => ({
     meta: [
       { charSet: "utf-8" },
@@ -124,13 +135,15 @@ function RootShell({ children }: { children: ReactNode }) {
 
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
+  const { pathname } = useLocation();
+  const isLoginPage = pathname === "/login";
 
   return (
     <QueryClientProvider client={queryClient}>
-      <TopBar />
+      {!isLoginPage && <TopBar />}
       {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
       <Outlet />
-      <SiteFooter />
+      {!isLoginPage && <SiteFooter />}
     </QueryClientProvider>
   );
 }

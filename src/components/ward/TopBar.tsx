@@ -1,6 +1,21 @@
 import { motion, useScroll, useSpring } from "motion/react";
 import { Link } from "@tanstack/react-router";
-import { BarChart3, Building2, FileText, MapPinned, Table2, TrendingUp } from "lucide-react";
+import {
+  BarChart3,
+  Building2,
+  FileText,
+  LogOut,
+  MapPinned,
+  Table2,
+  TrendingUp,
+} from "lucide-react";
+
+import { logoutFn } from "@/lib/auth.server";
+
+async function handleLogout() {
+  await logoutFn();
+  window.location.assign("/login");
+}
 
 const LINKS = [
   { to: "/", label: "Home", icon: Building2 },
@@ -45,6 +60,14 @@ export function TopBar() {
                 </Link>
               );
             })}
+            <button
+              type="button"
+              onClick={handleLogout}
+              title="Sign out"
+              className="inline-flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-xs font-medium text-[oklch(0.94_0.02_180)] transition hover:bg-[oklch(1_0_0/0.14)]"
+            >
+              <LogOut className="h-3.5 w-3.5" />
+            </button>
           </nav>
         </div>
       </header>
@@ -63,6 +86,14 @@ export function TopBar() {
             </Link>
           );
         })}
+        <button
+          type="button"
+          onClick={handleLogout}
+          title="Sign out"
+          className="inline-flex items-center gap-1 rounded-full px-3 py-1.5 text-[10px] font-medium text-[oklch(0.94_0.02_180)]"
+        >
+          <LogOut className="h-3 w-3" />
+        </button>
       </nav>
     </>
   );
