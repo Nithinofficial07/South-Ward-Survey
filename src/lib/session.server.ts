@@ -6,28 +6,25 @@ export type AuthSessionData = {
   isAdmin?: boolean;
 };
 
-// Session cookies are sealed (encrypted + signed) with this password, so it
-// must never be checked in. Set SESSION_SECRET in Vercel's project env vars
-// (Settings -> Environment Variables) to a random string of 32+ characters.
-// Without it, sessions still work locally but won't survive a redeploy and
-// aren't safe for production.
-const FALLBACK_DEV_SECRET = "insecure-local-dev-secret-set-SESSION_SECRET-in-vercel-env-vars";
-
-function getSessionPassword(): string {
+// Session cookies are sealed (encrypted + signed) with this password. There is
+// deliberately no fallback: without a real SESSION_SECRET, someone who reads
+// this source could seal their own "isAdmin: true" cookie and skip the login
+// entirely. Set SESSION_SECRET in Vercel (Settings -> Environment Variables)
+// to a random string of 32+ characters before login will work anywhere.
+function getSessionPassword(): string | undefined {
   const secret = process.env["SESSION_SECRET"];
-  if (secret && secret.length >= 32) return secret;
-  if (process.env["NODE_ENV"] === "production") {
-    console.warn(
-      "SESSION_SECRET is not set (or is shorter than 32 characters) — using an insecure " +
-        "fallback. Set SESSION_SECRET in the Vercel project's environment variables.",
-    );
-  }
-  return FALLBACK_DEV_SECRET;
+  return secret && secret.length >= 32 ? secret : undefined;
 }
 
-export function getAuthSession() {
+// Returns undefined when SESSION_SECRET isn't configured, so callers fail
+// closed (treat the visitor as unauthenticated) instead of falling back to
+// an insecure default.
+export async function getAuthSession() {
+  const password = getSessionPassword();
+  if (!password) return undefined;
+
   return createSessionManager<AuthSessionData>({
-    password: getSessionPassword(),
+    password,
     name: "sws_session",
     maxAge: 60 * 60 * 24 * 7, // 7 days
     cookie: {
